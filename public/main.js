@@ -1,22 +1,24 @@
 const {
+  DAY_KEYS,
   HOURS,
+  MAX_MERGE_SPAN,
   emptyData,
   mergeScheduleData,
   formatHour,
   formatHourRange,
   getPeriodLabel,
+  getActiveMergeSpan,
   countEntries,
   buildSummary,
   defaultArchiveTitle,
 } = window.TimeRiver;
 
-const DAY_KEYS = ['d1', 'd2'];
-const MERGE_STORAGE_KEY = 'time-river-display-merges';
+const LEGACY_MERGE_STORAGE_KEY = 'time-river-display-merges';
 
 let data = emptyData();
 let saveTimer = null;
 let sealing = false;
-let mergeState = loadMergeState();
+let activeMobileDay = 'd1';
 
 const refs = {
   overlay: document.getElementById('loading-overlay'),
@@ -31,13 +33,15 @@ const refs = {
   sealTitleInput: document.getElementById('seal-title-input'),
   sealError: document.getElementById('seal-error'),
   sealSubmitButton: document.getElementById('seal-submit-button'),
+  plannerGrid: document.getElementById('days-grid-main'),
+  mobileDayButtons: Array.from(document.querySelectorAll('[data-day-switch]')),
   d1Column: document.getElementById('day-column-d1'),
   d2Column: document.getElementById('day-column-d2'),
 };
 
-function loadMergeState() {
+function loadLegacyMergeState() {
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(MERGE_STORAGE_KEY) || '{}');
+    const parsed = JSON.parse(window.localStorage.getItem(LEGACY_MERGE_STORAGE_KEY) || '{}');
     return {
       d1: parsed.d1 && typeof parsed.d1 === 'object' ? parsed.d1 : {},
       d2: parsed.d2 && typeof parsed.d2 === 'object' ? parsed.d2 : {},
@@ -47,8 +51,35 @@ function loadMergeState() {
   }
 }
 
-function saveMergeState() {
-  window.localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(mergeState));
+function hasStoredMerges(merges) {
+  return DAY_KEYS.some((dayKey) => Object.keys(merges[dayKey] || {}).length > 0);
+}
+
+function ensureMergeState() {
+  if (!data.merges || typeof data.merges !== 'object') {
+    data.merges = { d1: {}, d2: {} };
+  }
+  DAY_KEYS.forEach((dayKey) => {
+    if (!data.merges[dayKey] || typeof data.merges[dayKey] !== 'object') {
+      data.merges[dayKey] = {};
+    }
+  });
+  return data.merges;
+}
+
+function hydrateLegacyMergeState() {
+  const legacyState = loadLegacyMergeState();
+  if (!hasStoredMerges(legacyState)) return;
+  if (hasStoredMerges(ensureMergeState())) return;
+
+  data.merges = mergeScheduleData({ merges: legacyState }).merges;
+  cleanupMergeState();
+
+  try {
+    window.localStorage.removeItem(LEGACY_MERGE_STORAGE_KEY);
+  } catch {
+    // Ignore localStorage failures and keep runtime state available.
+  }
 }
 
 function setSyncStatus(state, detail) {
@@ -134,46 +165,53 @@ function getMaxMergeSpan(dayKey, startIndex) {
     maxSpan += 1;
   }
 
-  return Math.min(maxSpan, 6);
+  return Math.min(maxSpan, MAX_MERGE_SPAN);
 }
 
 function getActiveSpan(dayKey, startIndex) {
-  const hour = HOURS[startIndex];
-  const rawSpan = Number(mergeState[dayKey][hour] || 1);
-  const maxSpan = getMaxMergeSpan(dayKey, startIndex);
-  if (!Number.isFinite(rawSpan) || rawSpan < 1) return 1;
-  return Math.min(rawSpan, maxSpan);
+  return getActiveMergeSpan(data, dayKey, startIndex);
 }
 
 function cleanupMergeState() {
+  const merges = ensureMergeState();
+  let changed = false;
+
   DAY_KEYS.forEach((dayKey) => {
     HOURS.forEach((hour, index) => {
       const value = data.slots[hour][dayKey].trim();
       if (!value) {
-        delete mergeState[dayKey][hour];
+        if (hour in merges[dayKey]) {
+          delete merges[dayKey][hour];
+          changed = true;
+        }
         return;
       }
 
       const span = getActiveSpan(dayKey, index);
-      if (span <= 1) delete mergeState[dayKey][hour];
-      else mergeState[dayKey][hour] = span;
+      if (span <= 1) {
+        if (hour in merges[dayKey]) {
+          delete merges[dayKey][hour];
+          changed = true;
+        }
+        return;
+      }
+
+      if (Number(merges[dayKey][hour]) !== span) {
+        merges[dayKey][hour] = span;
+        changed = true;
+      }
     });
   });
-  saveMergeState();
+
+  return changed;
 }
 
 function getDisplayHourCounts() {
-  const counts = { d1: 0, d2: 0 };
-
-  DAY_KEYS.forEach((dayKey) => {
-    HOURS.forEach((hour, index) => {
-      const value = data.slots[hour][dayKey].trim();
-      if (!value) return;
-      counts[dayKey] += getActiveSpan(dayKey, index);
-    });
-  });
-
-  return counts;
+  const counts = countEntries(data);
+  return {
+    d1: counts.d1Hours,
+    d2: counts.d2Hours,
+  };
 }
 
 function createTimeStamp(hour, span) {
@@ -227,8 +265,9 @@ function renderDayColumn(dayKey, root) {
       scheduleSave();
     });
     textarea.addEventListener('blur', () => {
-      cleanupMergeState();
+      const changed = cleanupMergeState();
       renderColumns();
+      if (changed) scheduleSave();
     });
     slot.appendChild(textarea);
 
@@ -251,10 +290,11 @@ function renderDayColumn(dayKey, root) {
 
         select.addEventListener('change', (event) => {
           const nextSpan = Number(event.target.value);
-          if (nextSpan <= 1) delete mergeState[dayKey][hour];
-          else mergeState[dayKey][hour] = nextSpan;
-          saveMergeState();
+          const merges = ensureMergeState();
+          if (nextSpan <= 1) delete merges[dayKey][hour];
+          else merges[dayKey][hour] = nextSpan;
           renderColumns();
+          scheduleSave();
         });
 
         controls.appendChild(select);
@@ -270,6 +310,16 @@ function renderColumns() {
   cleanupMergeState();
   renderDayColumn('d1', refs.d1Column);
   renderDayColumn('d2', refs.d2Column);
+}
+
+function setMobileDay(dayKey) {
+  activeMobileDay = DAY_KEYS.includes(dayKey) ? dayKey : 'd1';
+  refs.plannerGrid.dataset.activeDay = activeMobileDay;
+  refs.mobileDayButtons.forEach((button) => {
+    const isActive = button.dataset.daySwitch === activeMobileDay;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
 }
 
 function openSealModal() {
@@ -290,6 +340,8 @@ function scheduleSave() {
   window.clearTimeout(saveTimer);
 
   saveTimer = window.setTimeout(async () => {
+    cleanupMergeState();
+
     try {
       await pushSchedule(data);
       setSyncStatus('synced');
@@ -314,10 +366,9 @@ async function clearAll() {
   if (!window.confirm('确定清空当前日程吗？')) return;
 
   data = emptyData();
-  mergeState = { d1: {}, d2: {} };
-  saveMergeState();
   applyDataToDOM();
   renderColumns();
+  setMobileDay(activeMobileDay);
   refs.summaryPanel.classList.remove('visible');
 
   try {
@@ -347,6 +398,7 @@ async function submitSeal() {
   refs.sealSubmitButton.textContent = '封印中';
 
   try {
+    cleanupMergeState();
     await createArchive(title);
     closeSealModal();
     showToast(`已封存：${title}`);
@@ -365,6 +417,12 @@ function bindStaticEvents() {
     document.getElementById(id).addEventListener('input', (event) => {
       data[id] = event.target.value;
       scheduleSave();
+    });
+  });
+
+  refs.mobileDayButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      setMobileDay(button.dataset.daySwitch);
     });
   });
 
@@ -398,17 +456,21 @@ function bindStaticEvents() {
   try {
     const result = await fetchSchedule();
     if (result.data) data = mergeScheduleData(result.data);
+    hydrateLegacyMergeState();
     applyDataToDOM();
     renderColumns();
-    const dayHours = getDisplayHourCounts();
-    refs.lastSync.textContent = (dayHours.d1 + dayHours.d2)
-      ? `共 ${dayHours.d1 + dayHours.d2} 小时`
+    setMobileDay(activeMobileDay);
+    const counts = countEntries(data);
+    refs.lastSync.textContent = counts.totalHours
+      ? `共 ${counts.totalHours} 小时`
       : '今天还没有安排';
     setSyncStatus('synced');
   } catch (error) {
     console.error('Init failed:', error);
+    hydrateLegacyMergeState();
     applyDataToDOM();
     renderColumns();
+    setMobileDay(activeMobileDay);
     setSyncStatus('error', '无法连接');
   } finally {
     refs.overlay.classList.add('hidden');

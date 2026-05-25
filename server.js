@@ -96,16 +96,21 @@ function normalizeText(value) {
 
 function normalizeScheduleData(payload) {
   if (!payload || typeof payload !== 'object') {
-    return { d1name: '', d2name: '', d1date: '', d2date: '', slots: {} };
+    return { d1name: '', d2name: '', d1date: '', d2date: '', slots: {}, merges: { d1: {}, d2: {} } };
   }
 
   const slots = payload.slots && typeof payload.slots === 'object' ? payload.slots : {};
+  const merges = payload.merges && typeof payload.merges === 'object' ? payload.merges : {};
   return {
     d1name: normalizeText(payload.d1name),
     d2name: normalizeText(payload.d2name),
     d1date: normalizeText(payload.d1date),
     d2date: normalizeText(payload.d2date),
     slots,
+    merges: {
+      d1: merges.d1 && typeof merges.d1 === 'object' ? merges.d1 : {},
+      d2: merges.d2 && typeof merges.d2 === 'object' ? merges.d2 : {},
+    },
   };
 }
 

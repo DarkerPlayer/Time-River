@@ -49,8 +49,12 @@
           </div>
 
           <section class="planner-card readonly compact-card">
-            <div class="days-grid readonly-days">
-              <section class="day-pane">
+            <div class="mobile-day-switcher" aria-label="切换封存日期">
+              <button class="mobile-day-button active" type="button" data-history-day-switch="d1" aria-pressed="true">第一天</button>
+              <button class="mobile-day-button" type="button" data-history-day-switch="d2" aria-pressed="false">第二天</button>
+            </div>
+            <div class="days-grid readonly-days is-switchable" id="archive-days-grid" data-active-day="d1">
+              <section class="day-pane" data-day="d1">
                 <div class="day-card readonly">
                   <div class="day-card-head">
                     <span class="day-chip">第一天</span>
@@ -61,7 +65,7 @@
                 <div class="day-column readonly" id="archive-column-d1"></div>
               </section>
 
-              <section class="day-pane">
+              <section class="day-pane" data-day="d2">
                 <div class="day-card readonly">
                   <div class="day-card-head">
                     <span class="day-chip">第二天</span>

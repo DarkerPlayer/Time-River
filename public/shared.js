@@ -1,5 +1,7 @@
 (function () {
+  const DAY_KEYS = ['d1', 'd2'];
   const HOURS = [];
+  const MAX_MERGE_SPAN = 6;
   for (let hour = 6; hour <= 23; hour += 1) HOURS.push(hour);
   for (let hour = 0; hour <= 5; hour += 1) HOURS.push(hour);
 
@@ -12,8 +14,19 @@
     0: '凌晨',
   };
 
+  function emptyMerges() {
+    return { d1: {}, d2: {} };
+  }
+
   function emptyData() {
-    const data = { d1name: '', d2name: '', d1date: '', d2date: '', slots: {} };
+    const data = {
+      d1name: '',
+      d2name: '',
+      d1date: '',
+      d2date: '',
+      slots: {},
+      merges: emptyMerges(),
+    };
     HOURS.forEach((hour) => {
       data.slots[hour] = { d1: '', d2: '' };
     });
@@ -41,6 +54,17 @@
       };
     });
 
+    const merges = payload.merges && typeof payload.merges === 'object' ? payload.merges : {};
+    DAY_KEYS.forEach((dayKey) => {
+      const dayMerges = merges[dayKey] && typeof merges[dayKey] === 'object' ? merges[dayKey] : {};
+      HOURS.forEach((hour) => {
+        const rawSpan = Number(dayMerges[hour]);
+        if (Number.isInteger(rawSpan) && rawSpan > 1) {
+          base.merges[dayKey][hour] = Math.min(rawSpan, MAX_MERGE_SPAN);
+        }
+      });
+    });
+
     return base;
   }
 
@@ -50,7 +74,7 @@
 
   function formatHourRange(startHour, span) {
     if (span <= 1) return formatHour(startHour);
-    const endHour = HOURS[(HOURS.indexOf(startHour) + span - 1) % HOURS.length];
+    const endHour = (startHour + span) % 24;
     return `${formatHour(startHour)}~${formatHour(endHour)}`;
   }
 
@@ -69,23 +93,66 @@
     });
   }
 
+  function getMaxMergeSpan(data, dayKey, startIndex) {
+    const merged = mergeScheduleData(data);
+    const startHour = HOURS[startIndex];
+    const startValue = merged.slots[startHour][dayKey].trim();
+    if (!startValue) return 1;
+
+    let maxSpan = 1;
+    for (let index = startIndex + 1; index < HOURS.length; index += 1) {
+      const nextValue = merged.slots[HOURS[index]][dayKey].trim();
+      if (nextValue) break;
+      maxSpan += 1;
+    }
+
+    return Math.min(maxSpan, MAX_MERGE_SPAN);
+  }
+
+  function getActiveMergeSpan(data, dayKey, startIndex) {
+    const merged = mergeScheduleData(data);
+    const hour = HOURS[startIndex];
+    const rawSpan = Number(merged.merges[dayKey][hour] || 1);
+    const maxSpan = getMaxMergeSpan(merged, dayKey, startIndex);
+    if (!Number.isFinite(rawSpan) || rawSpan < 1) return 1;
+    return Math.min(Math.floor(rawSpan), maxSpan);
+  }
+
+  function getDayBlocks(data, dayKey) {
+    const merged = mergeScheduleData(data);
+    const blocks = [];
+    let coveredUntil = -1;
+
+    HOURS.forEach((hour, index) => {
+      if (index <= coveredUntil) return;
+
+      const value = merged.slots[hour][dayKey].trim();
+      if (!value) return;
+
+      const span = getActiveMergeSpan(merged, dayKey, index);
+      if (span > 1) coveredUntil = index + span - 1;
+      blocks.push({ hour, value, span, index });
+    });
+
+    return blocks;
+  }
+
   function countEntries(data) {
     const merged = mergeScheduleData(data);
-    let d1 = 0;
-    let d2 = 0;
-
-    HOURS.forEach((hour) => {
-      if (merged.slots[hour].d1.trim()) d1 += 1;
-      if (merged.slots[hour].d2.trim()) d2 += 1;
-    });
+    const d1Blocks = getDayBlocks(merged, 'd1');
+    const d2Blocks = getDayBlocks(merged, 'd2');
+    const d1Hours = d1Blocks.reduce((total, block) => total + block.span, 0);
+    const d2Hours = d2Blocks.reduce((total, block) => total + block.span, 0);
+    const d1 = d1Blocks.length;
+    const d2 = d2Blocks.length;
 
     return {
       d1,
       d2,
       total: d1 + d2,
-      d1Hours: d1,
-      d2Hours: d2,
-      totalHours: d1 + d2,
+      d1Hours,
+      d2Hours,
+      totalHours: d1Hours + d2Hours,
     };
   }
 
@@ -106,16 +173,16 @@
     const d2Date = merged.d2date ? ` · ${merged.d2date}` : '';
 
     let text = `【${d1Name}${d1Date}】\n`;
-    HOURS.forEach((hour) => {
-      const value = merged.slots[hour].d1.trim();
-      if (value) text += `  ${formatHour(hour)}  ${value}\n`;
+    getDayBlocks(merged, 'd1').forEach((block) => {
+      const label = block.span > 1 ? formatHourRange(block.hour, block.span) : formatHour(block.hour);
+      text += `  ${label}  ${block.value}\n`;
     });
     if (!counts.d1) text += '  （暂时没有安排）\n';
 
     text += `\n【${d2Name}${d2Date}】\n`;
-    HOURS.forEach((hour) => {
-      const value = merged.slots[hour].d2.trim();
-      if (value) text += `  ${formatHour(hour)}  ${value}\n`;
+    getDayBlocks(merged, 'd2').forEach((block) => {
+      const label = block.span > 1 ? formatHourRange(block.hour, block.span) : formatHour(block.hour);
+      text += `  ${label}  ${block.value}\n`;
     });
     if (!counts.d2) text += '  （暂时没有安排）\n';
 
@@ -134,13 +201,17 @@
   }
 
   window.TimeRiver = {
+    DAY_KEYS,
     HOURS,
+    MAX_MERGE_SPAN,
     emptyData,
     mergeScheduleData,
     formatHour,
     formatHourRange,
     getPeriodLabel,
     formatDateTime,
+    getActiveMergeSpan,
+    getDayBlocks,
     countEntries,
     buildSummary,
     defaultArchiveTitle,

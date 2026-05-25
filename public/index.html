@@ -17,7 +17,7 @@
   </div>
 
   <div class="page-shell">
-    <header class="topbar topbar-minimal">
+    <header class="topbar topbar-minimal topbar-mobile-dock">
       <div class="topbar-actions">
         <div class="sync-status" id="sync-status">
           <div class="sync-dot"></div>
@@ -33,8 +33,12 @@
 
     <main class="main-layout">
       <section class="planner-card">
-        <div class="days-grid">
-          <section class="day-pane">
+        <div class="mobile-day-switcher" aria-label="切换日期">
+          <button class="mobile-day-button active" type="button" data-day-switch="d1" aria-pressed="true">第一天</button>
+          <button class="mobile-day-button" type="button" data-day-switch="d2" aria-pressed="false">第二天</button>
+        </div>
+        <div class="days-grid is-switchable" id="days-grid-main" data-active-day="d1">
+          <section class="day-pane" data-day="d1">
             <div class="day-card">
               <div class="day-card-head">
                 <span class="day-chip">第一天</span>
@@ -45,7 +49,7 @@
             <div class="day-column" id="day-column-d1"></div>
           </section>
 
-          <section class="day-pane">
+          <section class="day-pane" data-day="d2">
             <div class="day-card">
               <div class="day-card-head">
                 <span class="day-chip">第二天</span>

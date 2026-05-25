@@ -206,6 +206,10 @@ textarea {
   padding-top: 16px;
 }
 
+.mobile-day-switcher {
+  display: none;
+}
+
 .days-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -239,6 +243,26 @@ textarea {
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-size: 12px;
+}
+
+.mobile-day-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.mobile-day-button.active {
+  border-color: transparent;
+  background: linear-gradient(180deg, rgba(118, 166, 165, 0.94), rgba(89, 134, 133, 0.94));
+  color: #f8fbfb;
 }
 
 .day-card input,
@@ -612,13 +636,55 @@ textarea {
     gap: 8px;
   }
 
-  .sync-status {
-    order: -1;
+  .topbar-mobile-dock {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    top: auto;
+    z-index: 30;
+    border-radius: 18px;
   }
 
-  .btn {
-    flex: 1 1 calc(50% - 8px);
+  .topbar-mobile-dock .topbar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .topbar-mobile-dock .sync-status {
+    grid-column: 1 / -1;
+    order: 0;
+    justify-content: center;
+  }
+
+  .topbar-mobile-dock + .main-layout {
+    padding-bottom: 170px;
+  }
+
+  .topbar-mobile-dock .btn {
+    width: 100%;
     min-width: 0;
+  }
+
+  .mobile-day-switcher {
+    position: sticky;
+    top: 8px;
+    z-index: 16;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    backdrop-filter: blur(10px);
+  }
+
+  .is-switchable[data-active-day="d1"] > .day-pane[data-day="d2"],
+  .is-switchable[data-active-day="d2"] > .day-pane[data-day="d1"] {
+    display: none;
   }
 
   .day-column {

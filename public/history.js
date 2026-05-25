@@ -2,8 +2,10 @@ const {
   HOURS,
   mergeScheduleData,
   formatHour,
+  formatHourRange,
   formatDateTime,
   getPeriodLabel,
+  getActiveMergeSpan,
   countEntries,
   buildSummary,
 } = window.TimeRiver;
@@ -22,6 +24,8 @@ const historyRefs = {
   detailD1Date: document.getElementById('archive-d1date'),
   detailD2Date: document.getElementById('archive-d2date'),
   detailSummary: document.getElementById('archive-summary-body'),
+  detailGrid: document.getElementById('archive-days-grid'),
+  mobileDayButtons: Array.from(document.querySelectorAll('[data-history-day-switch]')),
   d1Column: document.getElementById('archive-column-d1'),
   d2Column: document.getElementById('archive-column-d2'),
 };
@@ -29,6 +33,7 @@ const historyRefs = {
 const archiveCache = new Map();
 let archives = [];
 let selectedArchiveId = null;
+let activeMobileDay = 'd1';
 
 async function fetchArchives() {
   const response = await fetch('/api/archives');
@@ -45,10 +50,10 @@ async function fetchArchiveDetail(id) {
   return payload.archive;
 }
 
-function createReadonlyTimeStamp(hour) {
+function createReadonlyTimeStamp(hour, span) {
   const label = document.createElement('div');
   label.className = 'time-stamp';
-  label.style.gridRow = `${HOURS.indexOf(hour) + 1}`;
+  label.style.gridRow = `${HOURS.indexOf(hour) + 1} / span ${span}`;
 
   const period = getPeriodLabel(hour);
   if (period) {
@@ -60,7 +65,7 @@ function createReadonlyTimeStamp(hour) {
 
   const timeEl = document.createElement('span');
   timeEl.className = 'time-value';
-  timeEl.textContent = formatHour(hour);
+  timeEl.textContent = span > 1 ? formatHourRange(hour, span) : formatHour(hour);
   label.appendChild(timeEl);
   return label;
 }
@@ -70,15 +75,32 @@ function renderReadonlyDay(dayKey, root, dayData) {
   root.classList.add('readonly');
   root.style.setProperty('--rows', String(HOURS.length));
 
+  let coveredUntil = -1;
+
   HOURS.forEach((hour, index) => {
-    root.appendChild(createReadonlyTimeStamp(hour));
+    if (index <= coveredUntil) return;
+
+    const value = dayData.slots[hour][dayKey].trim();
+    const span = value ? getActiveMergeSpan(dayData, dayKey, index) : 1;
+    if (span > 1) coveredUntil = index + span - 1;
+
+    root.appendChild(createReadonlyTimeStamp(hour, span));
 
     const slot = document.createElement('div');
-    const value = dayData.slots[hour][dayKey].trim();
     slot.className = `slot-card readonly-slot${value ? ' has-content' : ' is-empty'}`;
-    slot.style.gridRow = `${index + 1}`;
+    slot.style.gridRow = `${index + 1} / span ${span}`;
     slot.textContent = value;
     root.appendChild(slot);
+  });
+}
+
+function setHistoryMobileDay(dayKey) {
+  activeMobileDay = dayKey === 'd2' ? 'd2' : 'd1';
+  historyRefs.detailGrid.dataset.activeDay = activeMobileDay;
+  historyRefs.mobileDayButtons.forEach((button) => {
+    const isActive = button.dataset.historyDaySwitch === activeMobileDay;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
 }
 
@@ -136,6 +158,7 @@ async function selectArchive(id) {
   historyRefs.detailSummary.textContent = buildSummary(dayData);
   renderReadonlyDay('d1', historyRefs.d1Column, dayData);
   renderReadonlyDay('d2', historyRefs.d2Column, dayData);
+  setHistoryMobileDay(activeMobileDay);
   historyRefs.detailPanel.classList.remove('hidden');
 
   const url = new URL(window.location.href);
@@ -149,6 +172,11 @@ async function selectArchive(id) {
   });
   document.getElementById('history-print-button').addEventListener('click', () => {
     window.print();
+  });
+  historyRefs.mobileDayButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      setHistoryMobileDay(button.dataset.historyDaySwitch);
+    });
   });
 
   try {
