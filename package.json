@@ -1,0 +1,14 @@
+{
+  "name": "daily-planner",
+  "version": "1.0.0",
+  "description": "Two-day schedule planner with multi-device sync",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "express": "^4.18.3"
+  }
+}
