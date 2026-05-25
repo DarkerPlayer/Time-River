@@ -637,13 +637,11 @@ textarea {
   }
 
   .topbar-mobile-dock {
-    position: fixed;
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
+    position: static;
     top: auto;
-    z-index: 30;
+    z-index: auto;
     border-radius: 18px;
+    margin-top: 16px;
   }
 
   .topbar-mobile-dock .topbar-actions {
@@ -658,8 +656,18 @@ textarea {
     justify-content: center;
   }
 
+  .page-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar-mobile-dock {
+    order: 2;
+  }
+
   .topbar-mobile-dock + .main-layout {
-    padding-bottom: 170px;
+    order: 1;
+    padding-bottom: 0;
   }
 
   .topbar-mobile-dock .btn {
