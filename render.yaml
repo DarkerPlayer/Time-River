@@ -8,6 +8,8 @@ services:
     envVars:
       - key: DB_DIR
         value: /data
+      - key: BACKUP_DIR
+        value: /data/backups
       - key: NODE_ENV
         value: production
     disk:
