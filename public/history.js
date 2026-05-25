@@ -3,6 +3,7 @@ const {
   mergeScheduleData,
   formatHour,
   formatDateTime,
+  getPeriodLabel,
   countEntries,
   buildSummary,
 } = window.TimeRiver;
@@ -44,22 +45,39 @@ async function fetchArchiveDetail(id) {
   return payload.archive;
 }
 
+function createReadonlyTimeStamp(hour) {
+  const label = document.createElement('div');
+  label.className = 'time-stamp';
+  label.style.gridRow = `${HOURS.indexOf(hour) + 1}`;
+
+  const period = getPeriodLabel(hour);
+  if (period) {
+    const periodEl = document.createElement('span');
+    periodEl.className = 'period-pill';
+    periodEl.textContent = period;
+    label.appendChild(periodEl);
+  }
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'time-value';
+  timeEl.textContent = formatHour(hour);
+  label.appendChild(timeEl);
+  return label;
+}
+
 function renderReadonlyDay(dayKey, root, dayData) {
   root.innerHTML = '';
   root.classList.add('readonly');
   root.style.setProperty('--rows', String(HOURS.length));
 
   HOURS.forEach((hour, index) => {
-    const label = document.createElement('div');
-    label.className = 'time-stamp';
-    label.style.gridRow = `${index + 1}`;
-    label.textContent = formatHour(hour);
-    root.appendChild(label);
+    root.appendChild(createReadonlyTimeStamp(hour));
 
     const slot = document.createElement('div');
-    slot.className = `slot-card readonly-slot${dayData.slots[hour][dayKey].trim() ? ' has-content' : ''}`;
+    const value = dayData.slots[hour][dayKey].trim();
+    slot.className = `slot-card readonly-slot${value ? ' has-content' : ' is-empty'}`;
     slot.style.gridRow = `${index + 1}`;
-    slot.textContent = dayData.slots[hour][dayKey].trim() || '留白';
+    slot.textContent = value;
     root.appendChild(slot);
   });
 }
@@ -110,7 +128,7 @@ async function selectArchive(id) {
 
   historyRefs.detailTitle.textContent = archive.title;
   historyRefs.detailCreatedAt.textContent = formatDateTime(archive.created_at);
-  historyRefs.detailCount.textContent = `${counts.total} 项`;
+  historyRefs.detailCount.textContent = `${counts.total} 项 / ${counts.totalHours} 小时`;
   historyRefs.detailD1Name.textContent = dayData.d1name || '第一天';
   historyRefs.detailD2Name.textContent = dayData.d2name || '第二天';
   historyRefs.detailD1Date.textContent = dayData.d1date || '未填写日期';
@@ -128,6 +146,9 @@ async function selectArchive(id) {
 (async function initHistory() {
   document.getElementById('back-button').addEventListener('click', () => {
     window.location.href = '/';
+  });
+  document.getElementById('history-print-button').addEventListener('click', () => {
+    window.print();
   });
 
   try {

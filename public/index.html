@@ -17,11 +17,7 @@
   </div>
 
   <div class="page-shell">
-    <header class="topbar">
-      <div class="title-block">
-        <h1>光阴长河</h1>
-      </div>
-
+    <header class="topbar topbar-minimal">
       <div class="topbar-actions">
         <div class="sync-status" id="sync-status">
           <div class="sync-dot"></div>
@@ -37,26 +33,28 @@
 
     <main class="main-layout">
       <section class="planner-card">
-        <div class="day-header-grid">
-          <div class="day-card">
-            <div class="day-card-head">
-              <span class="day-chip">第一天</span>
+        <div class="days-grid">
+          <section class="day-pane">
+            <div class="day-card">
+              <div class="day-card-head">
+                <span class="day-chip">第一天</span>
+              </div>
+              <input id="d1name" placeholder="第一天">
+              <input class="date-input" id="d1date" placeholder="日期">
             </div>
-            <input id="d1name" placeholder="第一天">
-            <input class="date-input" id="d1date" placeholder="日期">
-          </div>
-          <div class="day-card">
-            <div class="day-card-head">
-              <span class="day-chip">第二天</span>
-            </div>
-            <input id="d2name" placeholder="第二天">
-            <input class="date-input" id="d2date" placeholder="日期">
-          </div>
-        </div>
+            <div class="day-column" id="day-column-d1"></div>
+          </section>
 
-        <div class="timeline-grid" id="timeline-grid">
-          <div class="day-column" id="day-column-d1"></div>
-          <div class="day-column" id="day-column-d2"></div>
+          <section class="day-pane">
+            <div class="day-card">
+              <div class="day-card-head">
+                <span class="day-chip">第二天</span>
+              </div>
+              <input id="d2name" placeholder="第二天">
+              <input class="date-input" id="d2date" placeholder="日期">
+            </div>
+            <div class="day-column" id="day-column-d2"></div>
+          </section>
         </div>
       </section>
 

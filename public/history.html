@@ -13,13 +13,10 @@
 </head>
 <body>
   <div class="page-shell">
-    <header class="topbar">
-      <div class="title-block">
-        <h1>历史长河</h1>
-      </div>
-
+    <header class="topbar topbar-minimal">
       <div class="topbar-actions">
         <button class="btn" id="back-button" type="button">返回</button>
+        <button class="btn" id="history-print-button" type="button">打印</button>
       </div>
     </header>
 
@@ -52,26 +49,28 @@
           </div>
 
           <section class="planner-card readonly compact-card">
-            <div class="day-header-grid">
-              <div class="day-card readonly">
-                <div class="day-card-head">
-                  <span class="day-chip">第一天</span>
+            <div class="days-grid readonly-days">
+              <section class="day-pane">
+                <div class="day-card readonly">
+                  <div class="day-card-head">
+                    <span class="day-chip">第一天</span>
+                  </div>
+                  <strong class="readonly-day-name" id="archive-d1name"></strong>
+                  <span class="readonly-day-date" id="archive-d1date"></span>
                 </div>
-                <strong class="readonly-day-name" id="archive-d1name"></strong>
-                <span class="readonly-day-date" id="archive-d1date"></span>
-              </div>
-              <div class="day-card readonly">
-                <div class="day-card-head">
-                  <span class="day-chip">第二天</span>
-                </div>
-                <strong class="readonly-day-name" id="archive-d2name"></strong>
-                <span class="readonly-day-date" id="archive-d2date"></span>
-              </div>
-            </div>
+                <div class="day-column readonly" id="archive-column-d1"></div>
+              </section>
 
-            <div class="timeline-grid readonly-grid">
-              <div class="day-column" id="archive-column-d1"></div>
-              <div class="day-column" id="archive-column-d2"></div>
+              <section class="day-pane">
+                <div class="day-card readonly">
+                  <div class="day-card-head">
+                    <span class="day-chip">第二天</span>
+                  </div>
+                  <strong class="readonly-day-name" id="archive-d2name"></strong>
+                  <span class="readonly-day-date" id="archive-d2date"></span>
+                </div>
+                <div class="day-column readonly" id="archive-column-d2"></div>
+              </section>
             </div>
           </section>
 

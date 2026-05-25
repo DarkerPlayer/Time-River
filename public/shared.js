@@ -3,6 +3,15 @@
   for (let hour = 6; hour <= 23; hour += 1) HOURS.push(hour);
   for (let hour = 0; hour <= 5; hour += 1) HOURS.push(hour);
 
+  const PERIOD_LABELS = {
+    6: '上午',
+    12: '中午',
+    14: '下午',
+    18: '晚上',
+    22: '深夜',
+    0: '凌晨',
+  };
+
   function emptyData() {
     const data = { d1name: '', d2name: '', d1date: '', d2date: '', slots: {} };
     HOURS.forEach((hour) => {
@@ -45,6 +54,10 @@
     return `${formatHour(startHour)}~${formatHour(endHour)}`;
   }
 
+  function getPeriodLabel(hour) {
+    return PERIOD_LABELS[hour] || '';
+  }
+
   function formatDateTime(timestamp) {
     if (!timestamp) return '未知时间';
     return new Date(timestamp).toLocaleString('zh-CN', {
@@ -66,16 +79,31 @@
       if (merged.slots[hour].d2.trim()) d2 += 1;
     });
 
-    return { d1, d2, total: d1 + d2 };
+    return {
+      d1,
+      d2,
+      total: d1 + d2,
+      d1Hours: d1,
+      d2Hours: d2,
+      totalHours: d1 + d2,
+    };
   }
 
-  function buildSummary(data) {
+  function buildSummary(data, options = {}) {
     const merged = mergeScheduleData(data);
+    const counts = countEntries(merged);
+    const dayHours = options.dayHours || {
+      d1: counts.d1Hours,
+      d2: counts.d2Hours,
+    };
+    const totalHours = Number.isFinite(options.totalHours)
+      ? options.totalHours
+      : (dayHours.d1 + dayHours.d2);
+
     const d1Name = merged.d1name || '第一天';
     const d2Name = merged.d2name || '第二天';
     const d1Date = merged.d1date ? ` · ${merged.d1date}` : '';
     const d2Date = merged.d2date ? ` · ${merged.d2date}` : '';
-    const counts = countEntries(merged);
 
     let text = `【${d1Name}${d1Date}】\n`;
     HOURS.forEach((hour) => {
@@ -91,7 +119,9 @@
     });
     if (!counts.d2) text += '  （暂时没有安排）\n';
 
-    text += `\n共 ${counts.total} 项安排（${d1Name} ${counts.d1} 项 / ${d2Name} ${counts.d2} 项）`;
+    text += `\n共 ${counts.total} 项安排 / ${totalHours} 小时`;
+    text += `\n${d1Name}：${counts.d1} 项 / ${dayHours.d1} 小时`;
+    text += `\n${d2Name}：${counts.d2} 项 / ${dayHours.d2} 小时`;
     return text;
   }
 
@@ -109,6 +139,7 @@
     mergeScheduleData,
     formatHour,
     formatHourRange,
+    getPeriodLabel,
     formatDateTime,
     countEntries,
     buildSummary,

@@ -4,6 +4,7 @@ const {
   mergeScheduleData,
   formatHour,
   formatHourRange,
+  getPeriodLabel,
   countEntries,
   buildSummary,
   defaultArchiveTitle,
@@ -161,6 +162,41 @@ function cleanupMergeState() {
   saveMergeState();
 }
 
+function getDisplayHourCounts() {
+  const counts = { d1: 0, d2: 0 };
+
+  DAY_KEYS.forEach((dayKey) => {
+    HOURS.forEach((hour, index) => {
+      const value = data.slots[hour][dayKey].trim();
+      if (!value) return;
+      counts[dayKey] += getActiveSpan(dayKey, index);
+    });
+  });
+
+  return counts;
+}
+
+function createTimeStamp(hour, span) {
+  const label = document.createElement('div');
+  label.className = 'time-stamp';
+  label.style.gridRow = `${HOURS.indexOf(hour) + 1} / span ${span}`;
+
+  const period = getPeriodLabel(hour);
+  if (period) {
+    const periodEl = document.createElement('span');
+    periodEl.className = 'period-pill';
+    periodEl.textContent = period;
+    label.appendChild(periodEl);
+  }
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'time-value';
+  timeEl.textContent = span > 1 ? formatHourRange(hour, span) : formatHour(hour);
+  label.appendChild(timeEl);
+
+  return label;
+}
+
 function renderDayColumn(dayKey, root) {
   root.innerHTML = '';
   root.classList.remove('readonly');
@@ -175,11 +211,7 @@ function renderDayColumn(dayKey, root) {
     const span = value ? getActiveSpan(dayKey, index) : 1;
     if (span > 1) coveredUntil = index + span - 1;
 
-    const label = document.createElement('div');
-    label.className = 'time-stamp';
-    label.style.gridRow = `${index + 1} / span ${span}`;
-    label.textContent = value ? formatHourRange(hour, span) : formatHour(hour);
-    root.appendChild(label);
+    root.appendChild(createTimeStamp(hour, span));
 
     const slot = document.createElement('div');
     slot.className = `slot-card${value ? ' has-content' : ''}`;
@@ -188,7 +220,6 @@ function renderDayColumn(dayKey, root) {
     const textarea = document.createElement('textarea');
     textarea.className = 'slot-input';
     textarea.rows = 1;
-    textarea.placeholder = '添加事项';
     textarea.value = data.slots[hour][dayKey];
     textarea.addEventListener('input', (event) => {
       data.slots[hour][dayKey] = event.target.value;
@@ -270,7 +301,11 @@ function scheduleSave() {
 }
 
 function renderSummary() {
-  refs.summaryBody.textContent = buildSummary(data);
+  const dayHours = getDisplayHourCounts();
+  refs.summaryBody.textContent = buildSummary(data, {
+    dayHours,
+    totalHours: dayHours.d1 + dayHours.d2,
+  });
   refs.summaryPanel.classList.add('visible');
   refs.summaryPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -365,8 +400,10 @@ function bindStaticEvents() {
     if (result.data) data = mergeScheduleData(result.data);
     applyDataToDOM();
     renderColumns();
-    const counts = countEntries(data);
-    refs.lastSync.textContent = counts.total ? `共 ${counts.total} 项安排` : '今天还没有安排';
+    const dayHours = getDisplayHourCounts();
+    refs.lastSync.textContent = (dayHours.d1 + dayHours.d2)
+      ? `共 ${dayHours.d1 + dayHours.d2} 小时`
+      : '今天还没有安排';
     setSyncStatus('synced');
   } catch (error) {
     console.error('Init failed:', error);
