@@ -1,6 +1,5 @@
 const {
   HOURS,
-  PERIODS,
   mergeScheduleData,
   formatHour,
   formatDateTime,
@@ -15,15 +14,15 @@ const historyRefs = {
   detailEmpty: document.getElementById('detail-empty'),
   detailPanel: document.getElementById('archive-detail'),
   detailTitle: document.getElementById('archive-title'),
-  detailTitleCopy: document.getElementById('archive-title-copy'),
   detailCreatedAt: document.getElementById('archive-created-at'),
   detailCount: document.getElementById('archive-count'),
   detailD1Name: document.getElementById('archive-d1name'),
   detailD2Name: document.getElementById('archive-d2name'),
   detailD1Date: document.getElementById('archive-d1date'),
   detailD2Date: document.getElementById('archive-d2date'),
-  detailSlots: document.getElementById('archive-slots'),
   detailSummary: document.getElementById('archive-summary-body'),
+  d1Column: document.getElementById('archive-column-d1'),
+  d2Column: document.getElementById('archive-column-d2'),
 };
 
 const archiveCache = new Map();
@@ -38,7 +37,6 @@ async function fetchArchives() {
 
 async function fetchArchiveDetail(id) {
   if (archiveCache.has(id)) return archiveCache.get(id);
-
   const response = await fetch(`/api/archives/${id}`);
   if (!response.ok) throw new Error('fetch archive detail failed');
   const payload = await response.json();
@@ -46,39 +44,23 @@ async function fetchArchiveDetail(id) {
   return payload.archive;
 }
 
-function renderArchiveSlots(data) {
-  historyRefs.detailSlots.innerHTML = '';
+function renderReadonlyDay(dayKey, root, dayData) {
+  root.innerHTML = '';
+  root.classList.add('readonly');
+  root.style.setProperty('--rows', String(HOURS.length));
 
   HOURS.forEach((hour, index) => {
-    const period = PERIODS.find((item) => item.hour === hour);
-    if (period && index > 0) {
-      const separator = document.createElement('div');
-      separator.className = 'period-sep';
-      separator.innerHTML = `
-        <div class="period-label">${period.label}</div>
-        <div class="period-line"></div>
-        <div class="period-line"></div>
-      `;
-      historyRefs.detailSlots.appendChild(separator);
-    }
-
-    const row = document.createElement('div');
-    row.className = 'slot-row time-block';
-
     const label = document.createElement('div');
-    label.className = 'time-label hour-mark';
+    label.className = 'time-stamp';
+    label.style.gridRow = `${index + 1}`;
     label.textContent = formatHour(hour);
-    row.appendChild(label);
+    root.appendChild(label);
 
-    ['d1', 'd2'].forEach((dayKey) => {
-      const value = data.slots[hour][dayKey].trim();
-      const cell = document.createElement('div');
-      cell.className = `slot readonly-slot${value ? ' has-content' : ''}`;
-      cell.textContent = value || '留白';
-      row.appendChild(cell);
-    });
-
-    historyRefs.detailSlots.appendChild(row);
+    const slot = document.createElement('div');
+    slot.className = `slot-card readonly-slot${dayData.slots[hour][dayKey].trim() ? ' has-content' : ''}`;
+    slot.style.gridRow = `${index + 1}`;
+    slot.textContent = dayData.slots[hour][dayKey].trim() || '留白';
+    root.appendChild(slot);
   });
 }
 
@@ -90,7 +72,7 @@ function setSelectedState() {
 
 function renderTimeline() {
   historyRefs.timelineList.innerHTML = '';
-  historyRefs.timelineCount.textContent = `${archives.length} 段封存`;
+  historyRefs.timelineCount.textContent = `${archives.length} 条`;
 
   if (!archives.length) {
     historyRefs.timelineEmpty.classList.remove('hidden');
@@ -109,7 +91,6 @@ function renderTimeline() {
     button.innerHTML = `
       <span class="timeline-item-title">${archive.title}</span>
       <span class="timeline-item-meta">${formatDateTime(archive.created_at)}</span>
-      <span class="timeline-item-meta">${archive.d1_name || '第一天'} / ${archive.d2_name || '第二天'} · ${archive.entry_count} 项</span>
     `;
     button.addEventListener('click', () => selectArchive(archive.id));
     historyRefs.timelineList.appendChild(button);
@@ -124,19 +105,19 @@ async function selectArchive(id) {
   historyRefs.detailEmpty.classList.add('hidden');
 
   const archive = await fetchArchiveDetail(id);
-  const data = mergeScheduleData(archive.data);
-  const counts = countEntries(data);
+  const dayData = mergeScheduleData(archive.data);
+  const counts = countEntries(dayData);
 
   historyRefs.detailTitle.textContent = archive.title;
-  historyRefs.detailTitleCopy.textContent = archive.title;
   historyRefs.detailCreatedAt.textContent = formatDateTime(archive.created_at);
   historyRefs.detailCount.textContent = `${counts.total} 项`;
-  historyRefs.detailD1Name.textContent = data.d1name || '第一天';
-  historyRefs.detailD2Name.textContent = data.d2name || '第二天';
-  historyRefs.detailD1Date.textContent = data.d1date || '未填写日期';
-  historyRefs.detailD2Date.textContent = data.d2date || '未填写日期';
-  historyRefs.detailSummary.textContent = buildSummary(data);
-  renderArchiveSlots(data);
+  historyRefs.detailD1Name.textContent = dayData.d1name || '第一天';
+  historyRefs.detailD2Name.textContent = dayData.d2name || '第二天';
+  historyRefs.detailD1Date.textContent = dayData.d1date || '未填写日期';
+  historyRefs.detailD2Date.textContent = dayData.d2date || '未填写日期';
+  historyRefs.detailSummary.textContent = buildSummary(dayData);
+  renderReadonlyDay('d1', historyRefs.d1Column, dayData);
+  renderReadonlyDay('d2', historyRefs.d2Column, dayData);
   historyRefs.detailPanel.classList.remove('hidden');
 
   const url = new URL(window.location.href);
@@ -165,10 +146,7 @@ async function selectArchive(id) {
     await selectArchive(initialId);
   } catch (error) {
     historyRefs.timelineEmpty.classList.remove('hidden');
-    historyRefs.timelineEmpty.innerHTML = `
-      <h2>历史长河暂时无法打开</h2>
-      <p>请稍后刷新重试。</p>
-    `;
+    historyRefs.timelineEmpty.innerHTML = '<p>暂时无法读取封存内容。</p>';
     console.error('History init failed:', error);
   }
 }());

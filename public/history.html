@@ -6,104 +6,78 @@
   <title>历史长河 | Time River</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script defer src="/shared.js"></script>
   <script defer src="/history.js"></script>
 </head>
-<body class="history-page">
+<body>
   <div class="page-shell">
     <header class="topbar">
-      <div class="brand-block">
-        <span class="brand-mark">Time River</span>
-        <div class="brand-copy">
-          <strong>历史长河</strong>
-          <span>这里保存已经盖章封存的版本。它们只能被回望，不能再被编辑。</span>
-        </div>
+      <div class="title-block">
+        <h1>历史长河</h1>
       </div>
 
       <div class="topbar-actions">
-        <span class="readonly-badge">只读封存</span>
-        <button class="btn" id="back-button" type="button">返回光阴长河</button>
+        <button class="btn" id="back-button" type="button">返回</button>
       </div>
     </header>
 
     <main class="history-layout">
       <aside class="timeline-panel">
         <div class="panel-header compact">
-          <div>
-            <div class="section-kicker">Archive</div>
-            <h1>历史长河</h1>
-          </div>
+          <h2>封存列表</h2>
           <span class="timeline-count" id="timeline-count"></span>
         </div>
         <div class="timeline-list" id="timeline-list"></div>
         <div class="empty-state hidden" id="timeline-empty">
-          <h2>长河还很安静</h2>
-          <p>回到主页面点击“火漆封印”，第一段历史就会在这里出现。</p>
+          <p>还没有封存内容。</p>
         </div>
       </aside>
 
-      <section class="archive-panel" id="archive-panel">
+      <section class="archive-panel">
         <div class="empty-state" id="detail-empty">
-          <h2>选择一段历史</h2>
-          <p>从左侧挑选一个封存版本，右侧会展开完整内容。</p>
+          <p>选择左侧一条封存记录。</p>
         </div>
 
         <div class="archive-detail hidden" id="archive-detail">
           <div class="panel-header">
             <div>
-              <div class="section-kicker">Sealed Memory</div>
               <h2 id="archive-title"></h2>
-            </div>
-            <div class="archive-meta">
-              <span class="readonly-badge">不可编辑</span>
-              <span id="archive-created-at"></span>
-            </div>
-          </div>
-
-          <div class="archive-summary-grid">
-            <div class="stat-card">
-              <span>封存事件</span>
-              <strong id="archive-title-copy"></strong>
-            </div>
-            <div class="stat-card">
-              <span>日程条目</span>
-              <strong id="archive-count"></strong>
-            </div>
-            <div class="stat-card">
-              <span>时间标签</span>
-              <strong>06:00 → 05:00</strong>
+              <div class="archive-meta-line">
+                <span id="archive-created-at"></span>
+                <span id="archive-count"></span>
+              </div>
             </div>
           </div>
 
-          <section class="planner-card readonly">
-            <div class="planner-grid-header">
-              <div></div>
+          <section class="planner-card readonly compact-card">
+            <div class="day-header-grid">
               <div class="day-card readonly">
                 <div class="day-card-head">
-                  <span class="day-chip">DAY 01</span>
+                  <span class="day-chip">第一天</span>
                 </div>
                 <strong class="readonly-day-name" id="archive-d1name"></strong>
                 <span class="readonly-day-date" id="archive-d1date"></span>
               </div>
               <div class="day-card readonly">
                 <div class="day-card-head">
-                  <span class="day-chip">DAY 02</span>
+                  <span class="day-chip">第二天</span>
                 </div>
                 <strong class="readonly-day-name" id="archive-d2name"></strong>
                 <span class="readonly-day-date" id="archive-d2date"></span>
               </div>
             </div>
-            <div id="archive-slots"></div>
+
+            <div class="timeline-grid readonly-grid">
+              <div class="day-column" id="archive-column-d1"></div>
+              <div class="day-column" id="archive-column-d2"></div>
+            </div>
           </section>
 
-          <section class="summary-panel visible">
-            <div class="panel-header">
-              <div>
-                <div class="section-kicker">Overview</div>
-                <h2>封存摘要</h2>
-              </div>
+          <section class="summary-panel visible simple-panel">
+            <div class="panel-header compact">
+              <h2>摘要</h2>
             </div>
             <pre class="summary-body" id="archive-summary-body"></pre>
           </section>

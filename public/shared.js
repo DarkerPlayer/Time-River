@@ -3,14 +3,6 @@
   for (let hour = 6; hour <= 23; hour += 1) HOURS.push(hour);
   for (let hour = 0; hour <= 5; hour += 1) HOURS.push(hour);
 
-  const PERIODS = [
-    { hour: 6, label: '上午' },
-    { hour: 12, label: '下午' },
-    { hour: 18, label: '晚上' },
-    { hour: 22, label: '深夜' },
-    { hour: 0, label: '凌晨' },
-  ];
-
   function emptyData() {
     const data = { d1name: '', d2name: '', d1date: '', d2date: '', slots: {} };
     HOURS.forEach((hour) => {
@@ -45,6 +37,12 @@
 
   function formatHour(hour) {
     return `${String(hour).padStart(2, '0')}:00`;
+  }
+
+  function formatHourRange(startHour, span) {
+    if (span <= 1) return formatHour(startHour);
+    const endHour = HOURS[(HOURS.indexOf(startHour) + span - 1) % HOURS.length];
+    return `${formatHour(startHour)}~${formatHour(endHour)}`;
   }
 
   function formatDateTime(timestamp) {
@@ -107,10 +105,10 @@
 
   window.TimeRiver = {
     HOURS,
-    PERIODS,
     emptyData,
     mergeScheduleData,
     formatHour,
+    formatHourRange,
     formatDateTime,
     countEntries,
     buildSummary,

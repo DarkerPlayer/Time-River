@@ -293,7 +293,7 @@ app.post('/api/archives', (req, res) => {
 
 app.get('/api/export', (_req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename=\"time-river-export.json\"');
+  res.setHeader('Content-Disposition', 'attachment; filename="time-river-export.json"');
   res.send(JSON.stringify(exportSnapshot(), null, 2));
 });
 

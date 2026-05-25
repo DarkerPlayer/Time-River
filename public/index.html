@@ -6,7 +6,7 @@
   <title>光阴长河 | Time River</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script defer src="/shared.js"></script>
   <script defer src="/main.js"></script>
@@ -18,61 +18,46 @@
 
   <div class="page-shell">
     <header class="topbar">
-      <div class="brand-block">
-        <span class="brand-mark">Time River</span>
-        <div class="brand-copy">
-          <strong>光阴长河</strong>
-          <span>让已经确定的时刻安静流淌，也让重要版本被妥善封存。</span>
-        </div>
+      <div class="title-block">
+        <h1>光阴长河</h1>
       </div>
 
       <div class="topbar-actions">
         <div class="sync-status" id="sync-status">
           <div class="sync-dot"></div>
-          <span id="sync-text">连接中…</span>
+          <span id="sync-text">连接中</span>
         </div>
-
         <button class="btn" id="history-button" type="button">历史长河</button>
-        <button class="btn btn-seal" id="seal-button" type="button">火漆封印</button>
-        <button class="btn" id="summary-button" type="button">生成摘要</button>
+        <button class="btn btn-accent" id="seal-button" type="button">火漆封印</button>
+        <button class="btn" id="summary-button" type="button">摘要</button>
         <button class="btn" id="print-button" type="button">打印</button>
         <button class="btn btn-danger" id="clear-button" type="button">清空</button>
       </div>
     </header>
 
     <main class="main-layout">
-      <section class="hero-card">
-        <div class="section-kicker">Time River</div>
-        <div class="hero-copy">
-          <h1>光阴长河</h1>
-          <p>继续保留你现在的双日程编辑方式，并在需要的时候将一个确定的版本盖上火漆，送入历史长河里静静保存。</p>
-        </div>
-        <div class="hero-note">
-          <span>当前模式</span>
-          <strong>实时编辑</strong>
-        </div>
-      </section>
-
       <section class="planner-card">
-        <div class="planner-grid-header">
-          <div></div>
+        <div class="day-header-grid">
           <div class="day-card">
             <div class="day-card-head">
-              <span class="day-chip">DAY 01</span>
+              <span class="day-chip">第一天</span>
             </div>
             <input id="d1name" placeholder="第一天">
             <input class="date-input" id="d1date" placeholder="日期">
           </div>
           <div class="day-card">
             <div class="day-card-head">
-              <span class="day-chip">DAY 02</span>
+              <span class="day-chip">第二天</span>
             </div>
             <input id="d2name" placeholder="第二天">
             <input class="date-input" id="d2date" placeholder="日期">
           </div>
         </div>
 
-        <div id="slots"></div>
+        <div class="timeline-grid" id="timeline-grid">
+          <div class="day-column" id="day-column-d1"></div>
+          <div class="day-column" id="day-column-d2"></div>
+        </div>
       </section>
 
       <div class="meta-row">
@@ -82,13 +67,10 @@
 
       <section class="summary-panel" id="summary-panel">
         <div class="panel-header">
-          <div>
-            <div class="section-kicker">Summary</div>
-            <h2>日程摘要</h2>
-          </div>
+          <h2>摘要</h2>
           <div class="panel-actions">
             <span class="copy-feedback" id="copy-feedback">已复制</span>
-            <button class="btn" id="copy-button" type="button">复制文本</button>
+            <button class="btn" id="copy-button" type="button">复制</button>
           </div>
         </div>
         <pre class="summary-body" id="summary-body"></pre>
@@ -99,19 +81,15 @@
   <div class="modal-backdrop hidden" id="seal-modal">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="seal-title-heading">
       <div class="modal-head">
-        <div>
-          <div class="section-kicker">Wax Seal</div>
-          <h2 id="seal-title-heading">火漆封印</h2>
-        </div>
+        <h2 id="seal-title-heading">火漆封印</h2>
         <button class="icon-button" id="seal-close-button" type="button" aria-label="关闭">×</button>
       </div>
-      <p class="modal-copy">封存后的版本会进入“历史长河”，只能查看，不能再改动。给这次封存取一个历史事件名称，方便日后回看。</p>
       <label class="field-label" for="seal-title-input">历史事件名称</label>
-      <input class="modal-input" id="seal-title-input" type="text" maxlength="60" placeholder="例如：端午行程定稿 / 上海出差终版">
+      <input class="modal-input" id="seal-title-input" type="text" maxlength="60" placeholder="例如：端午定稿">
       <div class="modal-error hidden" id="seal-error"></div>
       <div class="modal-actions">
         <button class="btn" id="seal-cancel-button" type="button">取消</button>
-        <button class="btn btn-seal" id="seal-submit-button" type="button">封入长河</button>
+        <button class="btn btn-accent" id="seal-submit-button" type="button">封入长河</button>
       </div>
     </div>
   </div>

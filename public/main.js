@@ -1,24 +1,27 @@
 const {
   HOURS,
-  PERIODS,
   emptyData,
   mergeScheduleData,
   formatHour,
+  formatHourRange,
   countEntries,
   buildSummary,
   defaultArchiveTitle,
 } = window.TimeRiver;
 
+const DAY_KEYS = ['d1', 'd2'];
+const MERGE_STORAGE_KEY = 'time-river-display-merges';
+
 let data = emptyData();
 let saveTimer = null;
 let sealing = false;
+let mergeState = loadMergeState();
 
 const refs = {
   overlay: document.getElementById('loading-overlay'),
   syncStatus: document.getElementById('sync-status'),
   syncText: document.getElementById('sync-text'),
   lastSync: document.getElementById('last-sync'),
-  slots: document.getElementById('slots'),
   summaryPanel: document.getElementById('summary-panel'),
   summaryBody: document.getElementById('summary-body'),
   copyFeedback: document.getElementById('copy-feedback'),
@@ -27,13 +30,31 @@ const refs = {
   sealTitleInput: document.getElementById('seal-title-input'),
   sealError: document.getElementById('seal-error'),
   sealSubmitButton: document.getElementById('seal-submit-button'),
+  d1Column: document.getElementById('day-column-d1'),
+  d2Column: document.getElementById('day-column-d2'),
 };
+
+function loadMergeState() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(MERGE_STORAGE_KEY) || '{}');
+    return {
+      d1: parsed.d1 && typeof parsed.d1 === 'object' ? parsed.d1 : {},
+      d2: parsed.d2 && typeof parsed.d2 === 'object' ? parsed.d2 : {},
+    };
+  } catch {
+    return { d1: {}, d2: {} };
+  }
+}
+
+function saveMergeState() {
+  window.localStorage.setItem(MERGE_STORAGE_KEY, JSON.stringify(mergeState));
+}
 
 function setSyncStatus(state, detail) {
   refs.syncStatus.className = `sync-status ${state}`;
 
   if (state === 'syncing') {
-    refs.syncText.textContent = '同步中…';
+    refs.syncText.textContent = '同步中';
     return;
   }
 
@@ -44,16 +65,16 @@ function setSyncStatus(state, detail) {
       minute: '2-digit',
       second: '2-digit',
     });
-    refs.lastSync.textContent = `最后同步：${now}`;
+    refs.lastSync.textContent = `最后同步 ${now}`;
     return;
   }
 
   if (state === 'error') {
-    refs.syncText.textContent = detail || '同步失败，将自动重试';
+    refs.syncText.textContent = detail || '同步失败';
     return;
   }
 
-  refs.syncText.textContent = '连接中…';
+  refs.syncText.textContent = '连接中';
 }
 
 function showToast(message, tone = 'success') {
@@ -63,7 +84,7 @@ function showToast(message, tone = 'success') {
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => {
     refs.toast.classList.remove('visible');
-  }, 2600);
+  }, 2200);
 }
 
 async function fetchSchedule() {
@@ -89,9 +110,7 @@ async function createArchive(title) {
     body: JSON.stringify({ title, data }),
   });
   const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error || 'archive failed');
-  }
+  if (!response.ok) throw new Error(payload.error || 'archive failed');
   return payload;
 }
 
@@ -102,51 +121,124 @@ function applyDataToDOM() {
   document.getElementById('d2date').value = data.d2date;
 }
 
-function renderSlots() {
-  refs.slots.innerHTML = '';
+function getMaxMergeSpan(dayKey, startIndex) {
+  const startHour = HOURS[startIndex];
+  const startValue = data.slots[startHour][dayKey].trim();
+  if (!startValue) return 1;
+
+  let maxSpan = 1;
+  for (let index = startIndex + 1; index < HOURS.length; index += 1) {
+    const nextValue = data.slots[HOURS[index]][dayKey].trim();
+    if (nextValue) break;
+    maxSpan += 1;
+  }
+
+  return Math.min(maxSpan, 6);
+}
+
+function getActiveSpan(dayKey, startIndex) {
+  const hour = HOURS[startIndex];
+  const rawSpan = Number(mergeState[dayKey][hour] || 1);
+  const maxSpan = getMaxMergeSpan(dayKey, startIndex);
+  if (!Number.isFinite(rawSpan) || rawSpan < 1) return 1;
+  return Math.min(rawSpan, maxSpan);
+}
+
+function cleanupMergeState() {
+  DAY_KEYS.forEach((dayKey) => {
+    HOURS.forEach((hour, index) => {
+      const value = data.slots[hour][dayKey].trim();
+      if (!value) {
+        delete mergeState[dayKey][hour];
+        return;
+      }
+
+      const span = getActiveSpan(dayKey, index);
+      if (span <= 1) delete mergeState[dayKey][hour];
+      else mergeState[dayKey][hour] = span;
+    });
+  });
+  saveMergeState();
+}
+
+function renderDayColumn(dayKey, root) {
+  root.innerHTML = '';
+  root.classList.remove('readonly');
+  root.style.setProperty('--rows', String(HOURS.length));
+
+  let coveredUntil = -1;
 
   HOURS.forEach((hour, index) => {
-    const period = PERIODS.find((item) => item.hour === hour);
-    if (period && index > 0) {
-      const separator = document.createElement('div');
-      separator.className = 'period-sep';
-      separator.innerHTML = `
-        <div class="period-label">${period.label}</div>
-        <div class="period-line"></div>
-        <div class="period-line"></div>
-      `;
-      refs.slots.appendChild(separator);
-    }
+    if (index <= coveredUntil) return;
 
-    const row = document.createElement('div');
-    row.className = 'slot-row time-block';
+    const value = data.slots[hour][dayKey].trim();
+    const span = value ? getActiveSpan(dayKey, index) : 1;
+    if (span > 1) coveredUntil = index + span - 1;
 
     const label = document.createElement('div');
-    label.className = 'time-label hour-mark';
-    label.textContent = formatHour(hour);
-    row.appendChild(label);
+    label.className = 'time-stamp';
+    label.style.gridRow = `${index + 1} / span ${span}`;
+    label.textContent = value ? formatHourRange(hour, span) : formatHour(hour);
+    root.appendChild(label);
 
-    ['d1', 'd2'].forEach((dayKey) => {
-      const wrap = document.createElement('div');
-      const value = data.slots[hour][dayKey];
-      wrap.className = `slot${value ? ' has-content' : ''}`;
+    const slot = document.createElement('div');
+    slot.className = `slot-card${value ? ' has-content' : ''}`;
+    slot.style.gridRow = `${index + 1} / span ${span}`;
 
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.placeholder = '添加事项…';
-      input.value = value;
-      input.addEventListener('input', (event) => {
-        data.slots[hour][dayKey] = event.target.value;
-        wrap.classList.toggle('has-content', Boolean(event.target.value));
-        scheduleSave();
-      });
-
-      wrap.appendChild(input);
-      row.appendChild(wrap);
+    const textarea = document.createElement('textarea');
+    textarea.className = 'slot-input';
+    textarea.rows = 1;
+    textarea.placeholder = '添加事项';
+    textarea.value = data.slots[hour][dayKey];
+    textarea.addEventListener('input', (event) => {
+      data.slots[hour][dayKey] = event.target.value;
+      slot.classList.toggle('has-content', Boolean(event.target.value.trim()));
+      scheduleSave();
     });
+    textarea.addEventListener('blur', () => {
+      cleanupMergeState();
+      renderColumns();
+    });
+    slot.appendChild(textarea);
 
-    refs.slots.appendChild(row);
+    if (value) {
+      const maxSpan = getMaxMergeSpan(dayKey, index);
+      if (maxSpan > 1 || span > 1) {
+        const controls = document.createElement('div');
+        controls.className = 'slot-controls';
+
+        const select = document.createElement('select');
+        select.className = 'merge-select';
+
+        for (let optionValue = 1; optionValue <= maxSpan; optionValue += 1) {
+          const option = document.createElement('option');
+          option.value = String(optionValue);
+          option.textContent = optionValue === 1 ? '1小时' : `${optionValue}小时`;
+          if (optionValue === span) option.selected = true;
+          select.appendChild(option);
+        }
+
+        select.addEventListener('change', (event) => {
+          const nextSpan = Number(event.target.value);
+          if (nextSpan <= 1) delete mergeState[dayKey][hour];
+          else mergeState[dayKey][hour] = nextSpan;
+          saveMergeState();
+          renderColumns();
+        });
+
+        controls.appendChild(select);
+        slot.appendChild(controls);
+      }
+    }
+
+    root.appendChild(slot);
   });
+}
+
+function renderColumns() {
+  cleanupMergeState();
+  renderDayColumn('d1', refs.d1Column);
+  renderDayColumn('d2', refs.d2Column);
 }
 
 function openSealModal() {
@@ -184,17 +276,19 @@ function renderSummary() {
 }
 
 async function clearAll() {
-  if (!window.confirm('确定清空所有内容？所有设备上的当前日程都会被清除。')) return;
+  if (!window.confirm('确定清空当前日程吗？')) return;
 
   data = emptyData();
+  mergeState = { d1: {}, d2: {} };
+  saveMergeState();
   applyDataToDOM();
-  renderSlots();
+  renderColumns();
   refs.summaryPanel.classList.remove('visible');
 
   try {
     await pushSchedule(data);
     setSyncStatus('synced');
-    showToast('当前日程已清空。');
+    showToast('已清空');
   } catch (error) {
     setSyncStatus('error');
     console.error('Clear error:', error);
@@ -206,7 +300,7 @@ async function submitSeal() {
 
   const title = refs.sealTitleInput.value.trim();
   if (!title) {
-    refs.sealError.textContent = '请先填写历史事件名称。';
+    refs.sealError.textContent = '请填写历史事件名称';
     refs.sealError.classList.remove('hidden');
     refs.sealTitleInput.focus();
     return;
@@ -215,14 +309,14 @@ async function submitSeal() {
   refs.sealError.classList.add('hidden');
   sealing = true;
   refs.sealSubmitButton.disabled = true;
-  refs.sealSubmitButton.textContent = '封印中…';
+  refs.sealSubmitButton.textContent = '封印中';
 
   try {
     await createArchive(title);
     closeSealModal();
-    showToast(`《${title}》已封入历史长河。`);
+    showToast(`已封存：${title}`);
   } catch (error) {
-    refs.sealError.textContent = error.message || '封印失败，请稍后再试。';
+    refs.sealError.textContent = error.message || '封印失败';
     refs.sealError.classList.remove('hidden');
   } finally {
     sealing = false;
@@ -249,7 +343,7 @@ function bindStaticEvents() {
   document.getElementById('copy-button').addEventListener('click', async () => {
     await navigator.clipboard.writeText(refs.summaryBody.textContent);
     refs.copyFeedback.classList.add('visible');
-    window.setTimeout(() => refs.copyFeedback.classList.remove('visible'), 1800);
+    window.setTimeout(() => refs.copyFeedback.classList.remove('visible'), 1600);
   });
   document.getElementById('seal-close-button').addEventListener('click', closeSealModal);
   document.getElementById('seal-cancel-button').addEventListener('click', closeSealModal);
@@ -270,17 +364,15 @@ function bindStaticEvents() {
     const result = await fetchSchedule();
     if (result.data) data = mergeScheduleData(result.data);
     applyDataToDOM();
-    renderSlots();
+    renderColumns();
     const counts = countEntries(data);
-    refs.lastSync.textContent = counts.total
-      ? `当前共有 ${counts.total} 条安排`
-      : '当前还是一段空白河道';
+    refs.lastSync.textContent = counts.total ? `共 ${counts.total} 项安排` : '今天还没有安排';
     setSyncStatus('synced');
   } catch (error) {
     console.error('Init failed:', error);
     applyDataToDOM();
-    renderSlots();
-    setSyncStatus('error', '无法连接服务');
+    renderColumns();
+    setSyncStatus('error', '无法连接');
   } finally {
     refs.overlay.classList.add('hidden');
     window.setTimeout(() => refs.overlay.remove(), 320);
