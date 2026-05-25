@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: daily-planner
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: DB_DIR
+        value: /data
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: planner-db
+      mountPath: /data
+      sizeGB: 1
