@@ -1,5 +1,5 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,7 +16,7 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 // ─── 初始化数据库 ──────────────────────────────────────
-const db = new Database(DB_PATH);
+const db = new DatabaseSync(DB_PATH, { timeout: 5000 });
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS schedules (
@@ -76,4 +76,9 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.listen(PORT, () => {
   console.log(`Daily Planner running on http://localhost:${PORT}`);
   console.log(`Database: ${DB_PATH}`);
+});
+
+process.on('SIGTERM', () => {
+  db.close();
+  process.exit(0);
 });

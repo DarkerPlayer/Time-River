@@ -3,7 +3,8 @@ services:
     name: daily-planner
     runtime: node
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: DB_DIR
         value: /data
