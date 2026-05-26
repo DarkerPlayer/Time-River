@@ -6,13 +6,9 @@ services:
     startCommand: npm start
     healthCheckPath: /health
     envVars:
-      - key: DB_DIR
-        value: /data
+      - key: DATABASE_URL
+        sync: false
       - key: BACKUP_DIR
-        value: /data/backups
+        value: /opt/render/project/src/data/backups
       - key: NODE_ENV
         value: production
-    disk:
-      name: planner-db
-      mountPath: /data
-      sizeGB: 1
