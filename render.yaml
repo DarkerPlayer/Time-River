@@ -7,7 +7,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false
+        value: 'postgresql://neondb_owner:npg_uVg3BOxW1ADy@ep-shy-leaf-aqzssdvw-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
       - key: BACKUP_DIR
         value: /opt/render/project/src/data/backups
       - key: NODE_ENV
