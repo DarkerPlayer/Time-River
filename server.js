@@ -20,11 +20,11 @@ ensureDir(BACKUP_DIR);
 ensureDir(ARCHIVE_BACKUP_DIR);
 
 const storageDriver = DATABASE_URL ? 'postgres' : 'file';
+let storageReady = false;
+let storageInitPromise = null;
+let storageInitError = null;
 const pool = DATABASE_URL
-  ? new Pool({
-    connectionString: DATABASE_URL,
-    ssl: DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
-  })
+  ? new Pool(buildDatabaseConfig(DATABASE_URL))
   : null;
 
 app.use(express.json({ limit: '1mb' }));
@@ -38,6 +38,21 @@ function ensureDir(targetPath) {
 
 function normalizeText(value) {
   return typeof value === 'string' ? value : '';
+}
+
+function buildDatabaseConfig(rawDatabaseUrl) {
+  const url = new URL(rawDatabaseUrl);
+  const sslMode = url.searchParams.get('sslmode');
+  const channelBinding = url.searchParams.get('channel_binding');
+
+  url.searchParams.delete('sslmode');
+  url.searchParams.delete('channel_binding');
+
+  return {
+    connectionString: url.toString(),
+    ssl: sslMode === 'require' ? { rejectUnauthorized: false } : undefined,
+    enableChannelBinding: channelBinding === 'require',
+  };
 }
 
 function normalizeScheduleData(payload) {
@@ -170,6 +185,33 @@ async function initializeStorage() {
   if (!fs.existsSync(LOCAL_DATA_PATH)) {
     writeLocalStore(defaultLocalStore());
   }
+}
+
+function kickOffStorageInitialization() {
+  if (storageReady) {
+    return Promise.resolve();
+  }
+
+  if (!storageInitPromise) {
+    storageInitPromise = (async () => {
+      await initializeStorage();
+      await writeLatestBackup();
+      storageReady = true;
+      storageInitError = null;
+    })().catch((error) => {
+      storageReady = false;
+      storageInitError = error;
+      storageInitPromise = null;
+      throw error;
+    });
+  }
+
+  return storageInitPromise;
+}
+
+async function ensureStorageReady() {
+  if (storageReady) return;
+  await kickOffStorageInitialization();
 }
 
 async function getCurrentScheduleRecord() {
@@ -331,10 +373,12 @@ function asyncHandler(handler) {
 }
 
 app.get('/api/schedule', asyncHandler(async (_req, res) => {
+  await ensureStorageReady();
   res.json(await getCurrentScheduleRecord());
 }));
 
 app.post('/api/schedule', asyncHandler(async (req, res) => {
+  await ensureStorageReady();
   if (!req.body || typeof req.body !== 'object') {
     res.status(400).json({ error: 'Invalid payload' });
     return;
@@ -348,6 +392,7 @@ app.post('/api/schedule', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/archives', asyncHandler(async (_req, res) => {
+  await ensureStorageReady();
   const archives = await getArchiveRecords();
   res.json({
     archives: archives.map((archive) => ({
@@ -362,6 +407,7 @@ app.get('/api/archives', asyncHandler(async (_req, res) => {
 }));
 
 app.get('/api/archives/:id', asyncHandler(async (req, res) => {
+  await ensureStorageReady();
   const archive = await getArchiveRecordById(req.params.id);
 
   if (!archive) {
@@ -379,6 +425,7 @@ app.get('/api/archives/:id', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/archives', asyncHandler(async (req, res) => {
+  await ensureStorageReady();
   const title = normalizeText(req.body && req.body.title).trim();
   if (!title) {
     res.status(400).json({ error: 'Archive title is required' });
@@ -423,17 +470,23 @@ app.post('/api/archives', asyncHandler(async (req, res) => {
 }));
 
 app.get('/api/export', asyncHandler(async (_req, res) => {
+  await ensureStorageReady();
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="time-river-export.json"');
   res.send(JSON.stringify(await exportSnapshot(), null, 2));
 }));
 
 app.get('/health', asyncHandler(async (_req, res) => {
-  await checkStorageHealth();
+  if (storageReady) {
+    await checkStorageHealth();
+  }
+
   res.json({
-    status: 'ok',
+    status: storageReady ? 'ok' : (storageInitError ? 'degraded' : 'starting'),
     driver: storageDriver,
     database_url_configured: Boolean(DATABASE_URL),
+    storage_ready: storageReady,
+    storage_error: storageInitError ? storageInitError.message : null,
     backup_path: LATEST_BACKUP_PATH,
   });
 }));
@@ -443,9 +496,11 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-async function startServer() {
-  await initializeStorage();
-  await writeLatestBackup();
+function startServer() {
+  kickOffStorageInitialization().catch((error) => {
+    console.error('Storage init failed after startup:', error);
+  });
+
   app.listen(PORT, () => {
     console.log(`Time River running on http://localhost:${PORT}`);
     logPersistenceMode();
@@ -470,7 +525,9 @@ process.on('SIGINT', () => {
   closeStorageAndExit();
 });
 
-startServer().catch((error) => {
+try {
+  startServer();
+} catch (error) {
   console.error('Failed to start server:', error);
   process.exit(1);
-});
+}
