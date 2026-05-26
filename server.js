@@ -7,21 +7,24 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const DATABASE_URL = process.env.DATABASE_URL;
-const BACKUP_DIR = process.env.BACKUP_DIR || path.join(__dirname, 'data', 'backups');
+const DATA_DIR = path.join(__dirname, 'data');
+const LOCAL_DATA_PATH = process.env.LOCAL_DATA_PATH || path.join(DATA_DIR, 'local-store.json');
+const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, 'backups');
 const ARCHIVE_BACKUP_DIR = path.join(BACKUP_DIR, 'archives');
 const LATEST_BACKUP_PATH = path.join(BACKUP_DIR, 'time-river-latest.json');
 
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL is required. Please configure your Neon PostgreSQL connection string.');
-}
-
+ensureDir(DATA_DIR);
+ensureDir(path.dirname(LOCAL_DATA_PATH));
 ensureDir(BACKUP_DIR);
 ensureDir(ARCHIVE_BACKUP_DIR);
 
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
-});
+const storageDriver = DATABASE_URL ? 'postgres' : 'file';
+const pool = DATABASE_URL
+  ? new Pool({
+    connectionString: DATABASE_URL,
+    ssl: DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : undefined,
+  })
+  : null;
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -88,6 +91,36 @@ function sanitizeFilePart(value) {
     .slice(0, 40) || 'archive';
 }
 
+function defaultLocalStore() {
+  return {
+    schedule: {
+      data: {},
+      updated_at: null,
+    },
+    archives: [],
+  };
+}
+
+function readLocalStore() {
+  if (!fs.existsSync(LOCAL_DATA_PATH)) {
+    return defaultLocalStore();
+  }
+
+  const raw = fs.readFileSync(LOCAL_DATA_PATH, 'utf8');
+  const parsed = safeJsonParse(raw, defaultLocalStore());
+  return {
+    schedule: {
+      data: parsed.schedule && typeof parsed.schedule === 'object' ? parsed.schedule.data || {} : {},
+      updated_at: parsed.schedule && typeof parsed.schedule === 'object' ? Number(parsed.schedule.updated_at) || null : null,
+    },
+    archives: Array.isArray(parsed.archives) ? parsed.archives : [],
+  };
+}
+
+function writeLocalStore(store) {
+  writeJsonAtomically(LOCAL_DATA_PATH, store);
+}
+
 async function queryOne(text, params = []) {
   const result = await pool.query(text, params);
   return result.rows[0] || null;
@@ -98,72 +131,166 @@ async function queryAll(text, params = []) {
   return result.rows;
 }
 
-async function initializeDatabase() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS schedules (
-      id TEXT PRIMARY KEY,
-      data JSONB NOT NULL,
-      updated_at BIGINT NOT NULL
-    );
-  `);
+async function initializeStorage() {
+  if (storageDriver === 'postgres') {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schedules (
+        id TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at BIGINT NOT NULL
+      );
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS archives (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
-      data JSONB NOT NULL,
-      d1_name TEXT NOT NULL,
-      d2_name TEXT NOT NULL,
-      entry_count INTEGER NOT NULL,
-      created_at BIGINT NOT NULL
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS archives (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        data JSONB NOT NULL,
+        d1_name TEXT NOT NULL,
+        d2_name TEXT NOT NULL,
+        entry_count INTEGER NOT NULL,
+        created_at BIGINT NOT NULL
+      );
+    `);
 
-  await pool.query(`
-    CREATE INDEX IF NOT EXISTS idx_archives_created_at
-    ON archives(created_at DESC);
-  `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_archives_created_at
+      ON archives(created_at DESC);
+    `);
 
-  await pool.query(`
-    INSERT INTO schedules (id, data, updated_at)
-    VALUES ($1, $2::jsonb, $3)
-    ON CONFLICT (id) DO NOTHING;
-  `, ['main', JSON.stringify({}), Date.now()]);
+    await pool.query(`
+      INSERT INTO schedules (id, data, updated_at)
+      VALUES ($1, $2::jsonb, $3)
+      ON CONFLICT (id) DO NOTHING;
+    `, ['main', JSON.stringify({}), Date.now()]);
+    return;
+  }
+
+  if (!fs.existsSync(LOCAL_DATA_PATH)) {
+    writeLocalStore(defaultLocalStore());
+  }
 }
 
 async function getCurrentScheduleRecord() {
-  const row = await queryOne('SELECT data, updated_at FROM schedules WHERE id = $1', ['main']);
-  if (!row) {
-    return { data: {}, updated_at: null };
+  if (storageDriver === 'postgres') {
+    const row = await queryOne('SELECT data, updated_at FROM schedules WHERE id = $1', ['main']);
+    if (!row) {
+      return { data: {}, updated_at: null };
+    }
+
+    return {
+      data: typeof row.data === 'object' && row.data ? row.data : safeJsonParse(row.data, {}),
+      updated_at: Number(row.updated_at) || null,
+    };
   }
 
+  const store = readLocalStore();
   return {
-    data: typeof row.data === 'object' && row.data ? row.data : safeJsonParse(row.data, {}),
-    updated_at: Number(row.updated_at) || null,
+    data: store.schedule.data || {},
+    updated_at: store.schedule.updated_at,
   };
 }
 
-async function getArchiveRecords() {
-  const rows = await queryAll(`
-    SELECT id, title, data, d1_name, d2_name, entry_count, created_at
-    FROM archives
-    ORDER BY created_at DESC
-  `);
+async function saveScheduleRecord(data, updatedAt) {
+  if (storageDriver === 'postgres') {
+    await pool.query(`
+      INSERT INTO schedules (id, data, updated_at)
+      VALUES ($1, $2::jsonb, $3)
+      ON CONFLICT (id) DO UPDATE SET
+        data = EXCLUDED.data,
+        updated_at = EXCLUDED.updated_at
+    `, ['main', JSON.stringify(data), updatedAt]);
+    return;
+  }
 
-  return rows.map((archive) => ({
-    ...archive,
-    data: typeof archive.data === 'object' && archive.data ? archive.data : safeJsonParse(archive.data, {}),
-    entry_count: Number(archive.entry_count),
-    created_at: Number(archive.created_at),
-  }));
+  const store = readLocalStore();
+  store.schedule = {
+    data,
+    updated_at: updatedAt,
+  };
+  writeLocalStore(store);
+}
+
+async function getArchiveRecords() {
+  if (storageDriver === 'postgres') {
+    const rows = await queryAll(`
+      SELECT id, title, data, d1_name, d2_name, entry_count, created_at
+      FROM archives
+      ORDER BY created_at DESC
+    `);
+
+    return rows.map((archive) => ({
+      ...archive,
+      data: typeof archive.data === 'object' && archive.data ? archive.data : safeJsonParse(archive.data, {}),
+      entry_count: Number(archive.entry_count),
+      created_at: Number(archive.created_at),
+    }));
+  }
+
+  const store = readLocalStore();
+  return [...store.archives].sort((left, right) => Number(right.created_at) - Number(left.created_at));
+}
+
+async function getArchiveRecordById(id) {
+  if (storageDriver === 'postgres') {
+    const archive = await queryOne(`
+      SELECT id, title, data, d1_name, d2_name, entry_count, created_at
+      FROM archives
+      WHERE id = $1
+    `, [id]);
+
+    if (!archive) return null;
+
+    return {
+      ...archive,
+      data: typeof archive.data === 'object' && archive.data ? archive.data : safeJsonParse(archive.data, {}),
+      entry_count: Number(archive.entry_count),
+      created_at: Number(archive.created_at),
+    };
+  }
+
+  const store = readLocalStore();
+  return store.archives.find((archive) => archive.id === id) || null;
+}
+
+async function insertArchiveRecord(archiveRecord) {
+  if (storageDriver === 'postgres') {
+    await pool.query(`
+      INSERT INTO archives (id, title, data, d1_name, d2_name, entry_count, created_at)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
+    `, [
+      archiveRecord.id,
+      archiveRecord.title,
+      JSON.stringify(archiveRecord.data),
+      archiveRecord.d1_name,
+      archiveRecord.d2_name,
+      archiveRecord.entry_count,
+      archiveRecord.created_at,
+    ]);
+    return;
+  }
+
+  const store = readLocalStore();
+  store.archives.unshift(archiveRecord);
+  writeLocalStore(store);
+}
+
+async function checkStorageHealth() {
+  if (storageDriver === 'postgres') {
+    await pool.query('SELECT 1');
+    return;
+  }
+
+  readLocalStore();
 }
 
 async function exportSnapshot() {
   return {
     generated_at: Date.now(),
     persistence: {
-      driver: 'postgres',
+      driver: storageDriver,
       database_url_configured: Boolean(DATABASE_URL),
+      local_data_path: storageDriver === 'file' ? LOCAL_DATA_PATH : null,
       backup_dir: BACKUP_DIR,
     },
     schedule: await getCurrentScheduleRecord(),
@@ -188,9 +315,12 @@ function writeArchiveBackup(archiveRecord) {
 }
 
 function logPersistenceMode() {
-  console.log('[storage] Driver: postgres');
+  console.log(`[storage] Driver: ${storageDriver}`);
   console.log(`[storage] Backup snapshot: ${LATEST_BACKUP_PATH}`);
   console.log(`[storage] DATABASE_URL configured: ${DATABASE_URL ? 'yes' : 'no'}`);
+  if (storageDriver === 'file') {
+    console.warn(`[storage] Falling back to local file storage at ${LOCAL_DATA_PATH}`);
+  }
 }
 
 function asyncHandler(handler) {
@@ -211,27 +341,19 @@ app.post('/api/schedule', asyncHandler(async (req, res) => {
 
   const normalized = normalizeScheduleData(req.body);
   const now = Date.now();
-  await pool.query(`
-    INSERT INTO schedules (id, data, updated_at)
-    VALUES ($1, $2::jsonb, $3)
-    ON CONFLICT (id) DO UPDATE SET
-      data = EXCLUDED.data,
-      updated_at = EXCLUDED.updated_at
-  `, ['main', JSON.stringify(normalized), now]);
+  await saveScheduleRecord(normalized, now);
   await writeLatestBackup();
   res.json({ ok: true, updated_at: now });
 }));
 
 app.get('/api/archives', asyncHandler(async (_req, res) => {
-  const rows = await queryAll(`
-    SELECT id, title, d1_name, d2_name, entry_count, created_at
-    FROM archives
-    ORDER BY created_at DESC
-  `);
-
+  const archives = await getArchiveRecords();
   res.json({
-    archives: rows.map((archive) => ({
-      ...archive,
+    archives: archives.map((archive) => ({
+      id: archive.id,
+      title: archive.title,
+      d1_name: archive.d1_name,
+      d2_name: archive.d2_name,
       entry_count: Number(archive.entry_count),
       created_at: Number(archive.created_at),
     })),
@@ -239,11 +361,7 @@ app.get('/api/archives', asyncHandler(async (_req, res) => {
 }));
 
 app.get('/api/archives/:id', asyncHandler(async (req, res) => {
-  const archive = await queryOne(`
-    SELECT id, title, data, d1_name, d2_name, entry_count, created_at
-    FROM archives
-    WHERE id = $1
-  `, [req.params.id]);
+  const archive = await getArchiveRecordById(req.params.id);
 
   if (!archive) {
     res.status(404).json({ error: 'Archive not found' });
@@ -253,7 +371,6 @@ app.get('/api/archives/:id', asyncHandler(async (req, res) => {
   res.json({
     archive: {
       ...archive,
-      data: typeof archive.data === 'object' && archive.data ? archive.data : safeJsonParse(archive.data, {}),
       entry_count: Number(archive.entry_count),
       created_at: Number(archive.created_at),
     },
@@ -277,19 +394,6 @@ app.post('/api/archives', asyncHandler(async (req, res) => {
   const id = randomUUID();
   const meta = archiveMetadata(data);
 
-  await pool.query(`
-    INSERT INTO archives (id, title, data, d1_name, d2_name, entry_count, created_at)
-    VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
-  `, [
-    id,
-    title,
-    JSON.stringify(data),
-    meta.d1Name,
-    meta.d2Name,
-    meta.entryCount,
-    createdAt,
-  ]);
-
   const archiveRecord = {
     id,
     title,
@@ -300,6 +404,7 @@ app.post('/api/archives', asyncHandler(async (req, res) => {
     created_at: createdAt,
   };
 
+  await insertArchiveRecord(archiveRecord);
   writeArchiveBackup(archiveRecord);
   await writeLatestBackup();
 
@@ -323,10 +428,11 @@ app.get('/api/export', asyncHandler(async (_req, res) => {
 }));
 
 app.get('/health', asyncHandler(async (_req, res) => {
-  await pool.query('SELECT 1');
+  await checkStorageHealth();
   res.json({
     status: 'ok',
-    driver: 'postgres',
+    driver: storageDriver,
+    database_url_configured: Boolean(DATABASE_URL),
     backup_path: LATEST_BACKUP_PATH,
   });
 }));
@@ -337,7 +443,7 @@ app.use((error, _req, res, _next) => {
 });
 
 async function startServer() {
-  await initializeDatabase();
+  await initializeStorage();
   await writeLatestBackup();
   app.listen(PORT, () => {
     console.log(`Time River running on http://localhost:${PORT}`);
@@ -345,20 +451,22 @@ async function startServer() {
   });
 }
 
-async function closeDatabaseAndExit() {
+async function closeStorageAndExit() {
   try {
-    await pool.end();
+    if (pool) {
+      await pool.end();
+    }
   } finally {
     process.exit(0);
   }
 }
 
 process.on('SIGTERM', () => {
-  closeDatabaseAndExit();
+  closeStorageAndExit();
 });
 
 process.on('SIGINT', () => {
-  closeDatabaseAndExit();
+  closeStorageAndExit();
 });
 
 startServer().catch((error) => {
