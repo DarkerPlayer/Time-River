@@ -255,6 +255,36 @@ function renderDayColumn(dayKey, root) {
     slot.className = `slot-card${value ? ' has-content' : ''}`;
     slot.style.gridRow = `${index + 1} / span ${span}`;
 
+    // 移动端文本预览
+    const isMobile = window.innerWidth <= 720;
+    if (isMobile && value) {
+      const preview = document.createElement('div');
+      preview.className = 'slot-text-preview';
+      preview.textContent = value;
+      slot.appendChild(preview);
+
+      // 缩小按钮
+      const collapseBtn = document.createElement('button');
+      collapseBtn.className = 'slot-collapse-btn';
+      collapseBtn.innerHTML = '×';
+      collapseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        slot.classList.remove('expanded');
+        document.body.style.overflow = '';
+      });
+      slot.appendChild(collapseBtn);
+
+      // 点击展开
+      slot.addEventListener('click', () => {
+        if (!slot.classList.contains('expanded')) {
+          slot.classList.add('expanded');
+          document.body.style.overflow = 'hidden';
+          const textarea = slot.querySelector('.slot-input');
+          if (textarea) textarea.focus();
+        }
+      });
+    }
+
     const textarea = document.createElement('textarea');
     textarea.className = 'slot-input';
     textarea.rows = 1;
@@ -262,6 +292,9 @@ function renderDayColumn(dayKey, root) {
     textarea.addEventListener('input', (event) => {
       data.slots[hour][dayKey] = event.target.value;
       slot.classList.toggle('has-content', Boolean(event.target.value.trim()));
+      // 更新预览文本
+      const preview = slot.querySelector('.slot-text-preview');
+      if (preview) preview.textContent = event.target.value;
       scheduleSave();
     });
     textarea.addEventListener('blur', () => {

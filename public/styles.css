@@ -337,10 +337,96 @@ textarea {
   border-radius: 14px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.66);
+  cursor: default;
+}
+
+/* 移动端文本截断和展开样式 */
+@media (max-width: 720px) {
+  .slot-card.has-content {
+    cursor: pointer;
+  }
+
+  .slot-card .slot-text-preview {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.55;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .slot-card .slot-input {
+    display: none;
+  }
+
+  .slot-card.expanded {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    border-radius: 0;
+    padding: 20px;
+    overflow-y: auto;
+    background: var(--surface-strong);
+  }
+
+  .slot-card.expanded .slot-text-preview {
+    display: none;
+  }
+
+  .slot-card.expanded .slot-input {
+    display: block;
+    width: 100%;
+    min-height: 60vh;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .slot-card.expanded .slot-collapse-btn {
+    display: flex;
+  }
+
+  .slot-collapse-btn {
+    display: none;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 51;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface-strong);
+    color: var(--text);
+    font-size: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
 }
 
 .slot-card.has-content {
-  background: rgba(118, 166, 165, 0.08);
+  background: linear-gradient(135deg,
+    rgba(118, 166, 165, 0.06) 0%,
+    rgba(142, 188, 187, 0.12) 25%,
+    rgba(118, 166, 165, 0.08) 50%,
+    rgba(168, 213, 211, 0.14) 75%,
+    rgba(118, 166, 165, 0.06) 100%);
+  background-size: 400% 400%;
+  animation: streamFlow 6s ease-in-out infinite;
+  border-color: rgba(118, 166, 165, 0.25);
+}
+
+@keyframes streamFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 .slot-card.is-empty {
