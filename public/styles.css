@@ -344,6 +344,15 @@ textarea {
 @media (max-width: 720px) {
   .slot-card.has-content {
     cursor: pointer;
+    background: linear-gradient(135deg,
+      rgba(118, 166, 165, 0.06) 0%,
+      rgba(142, 188, 187, 0.12) 25%,
+      rgba(118, 166, 165, 0.08) 50%,
+      rgba(168, 213, 211, 0.14) 75%,
+      rgba(118, 166, 165, 0.06) 100%);
+    background-size: 400% 400%;
+    animation: streamFlow 6s ease-in-out infinite;
+    border-color: rgba(118, 166, 165, 0.25);
   }
 
   .slot-card .slot-text-preview {
@@ -361,54 +370,83 @@ textarea {
   .slot-card .slot-input {
     display: none;
   }
+}
 
-  .slot-card.expanded {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 50;
-    border-radius: 0;
-    padding: 20px;
-    overflow-y: auto;
-    background: var(--surface-strong);
-  }
+/* 移动端展开遮罩层 */
+.slot-expand-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(237, 247, 247, 0.75);
+  backdrop-filter: blur(6px);
+}
 
-  .slot-card.expanded .slot-text-preview {
-    display: none;
-  }
+.slot-expand-backdrop.visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
 
-  .slot-card.expanded .slot-input {
-    display: block;
-    width: 100%;
-    min-height: 60vh;
-    font-size: 16px;
-    line-height: 1.6;
-  }
+.slot-expand-panel {
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  background: var(--surface-strong);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
 
-  .slot-card.expanded .slot-collapse-btn {
-    display: flex;
-  }
+.slot-expand-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 
-  .slot-collapse-btn {
-    display: none;
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 51;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 1px solid var(--line);
-    background: var(--surface-strong);
-    color: var(--text);
-    font-size: 20px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-  }
+.slot-expand-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.slot-expand-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.slot-expand-textarea {
+  width: 100%;
+  min-height: 50vh;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 14px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text);
+  resize: none;
+  outline: none;
+}
+
+.slot-expand-textarea:focus {
+  border-color: var(--accent);
 }
 
 .slot-card.has-content {

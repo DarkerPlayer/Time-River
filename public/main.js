@@ -37,7 +37,13 @@ const refs = {
   mobileDayButtons: Array.from(document.querySelectorAll('[data-day-switch]')),
   d1Column: document.getElementById('day-column-d1'),
   d2Column: document.getElementById('day-column-d2'),
+  expandBackdrop: document.getElementById('slot-expand-backdrop'),
+  expandTitle: document.getElementById('slot-expand-title'),
+  expandTextarea: document.getElementById('slot-expand-textarea'),
+  expandClose: document.getElementById('slot-expand-close'),
 };
+
+let expandCallback = null;
 
 function loadLegacyMergeState() {
   try {
@@ -117,6 +123,30 @@ function showToast(message, tone = 'success') {
   showToast.timer = window.setTimeout(() => {
     refs.toast.classList.remove('visible');
   }, 2200);
+}
+
+function openExpandPanel(hour, dayKey, currentValue, onSave) {
+  const period = getPeriodLabel(hour);
+  const dayName = dayKey === 'd1' ? '第一天' : '第二天';
+  refs.expandTitle.textContent = `${dayName} · ${period || hour}`;
+
+  refs.expandTextarea.value = currentValue;
+  refs.expandBackdrop.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+
+  expandCallback = onSave;
+
+  setTimeout(() => refs.expandTextarea.focus(), 100);
+}
+
+function closeExpandPanel() {
+  if (expandCallback && refs.expandTextarea.value !== refs.expandTextarea.defaultValue) {
+    expandCallback(refs.expandTextarea.value);
+  }
+  refs.expandBackdrop.classList.remove('visible');
+  document.body.style.overflow = '';
+  expandCallback = null;
+  renderColumns();
 }
 
 async function fetchSchedule() {
@@ -263,25 +293,14 @@ function renderDayColumn(dayKey, root) {
       preview.textContent = value;
       slot.appendChild(preview);
 
-      // 缩小按钮
-      const collapseBtn = document.createElement('button');
-      collapseBtn.className = 'slot-collapse-btn';
-      collapseBtn.innerHTML = '×';
-      collapseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        slot.classList.remove('expanded');
-        document.body.style.overflow = '';
-      });
-      slot.appendChild(collapseBtn);
-
-      // 点击展开
+      // 点击展开弹窗
       slot.addEventListener('click', () => {
-        if (!slot.classList.contains('expanded')) {
-          slot.classList.add('expanded');
-          document.body.style.overflow = 'hidden';
-          const textarea = slot.querySelector('.slot-input');
-          if (textarea) textarea.focus();
-        }
+        openExpandPanel(hour, dayKey, data.slots[hour][dayKey], (newValue) => {
+          data.slots[hour][dayKey] = newValue;
+          preview.textContent = newValue;
+          slot.classList.toggle('has-content', Boolean(newValue.trim()));
+          scheduleSave();
+        });
       });
     }
 
@@ -481,6 +500,15 @@ function bindStaticEvents() {
     if (event.key === 'Escape') closeSealModal();
   });
   refs.sealSubmitButton.addEventListener('click', submitSeal);
+
+  // 展开弹窗事件
+  refs.expandClose.addEventListener('click', closeExpandPanel);
+  refs.expandBackdrop.addEventListener('click', (event) => {
+    if (event.target === refs.expandBackdrop) closeExpandPanel();
+  });
+  refs.expandTextarea.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeExpandPanel();
+  });
 }
 
 (async function init() {
