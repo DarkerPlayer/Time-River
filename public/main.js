@@ -287,18 +287,23 @@ function renderDayColumn(dayKey, root) {
 
     // 移动端文本预览
     const isMobile = window.innerWidth <= 720;
-    if (isMobile && value) {
-      const preview = document.createElement('div');
-      preview.className = 'slot-text-preview';
-      preview.textContent = value;
-      slot.appendChild(preview);
+    if (isMobile) {
+      if (value) {
+        const preview = document.createElement('div');
+        preview.className = 'slot-text-preview';
+        preview.textContent = value;
+        slot.appendChild(preview);
+      }
 
-      // 点击展开弹窗
+      // 点击展开弹窗（空白格子也可点击）
       slot.addEventListener('click', () => {
+        const preview = slot.querySelector('.slot-text-preview');
         openExpandPanel(hour, dayKey, data.slots[hour][dayKey], (newValue) => {
           data.slots[hour][dayKey] = newValue;
-          preview.textContent = newValue;
+          if (preview) preview.textContent = newValue;
           slot.classList.toggle('has-content', Boolean(newValue.trim()));
+          // 如果输入了内容但没有预览元素，刷新列表
+          if (newValue.trim() && !preview) renderColumns();
           scheduleSave();
         });
       });

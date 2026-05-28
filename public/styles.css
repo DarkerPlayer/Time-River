@@ -446,15 +446,8 @@ textarea {
 }
 
 .slot-card.has-content {
-  background: linear-gradient(135deg,
-    rgba(118, 166, 165, 0.12) 0%,
-    rgba(142, 188, 187, 0.22) 25%,
-    rgba(118, 166, 165, 0.16) 50%,
-    rgba(168, 213, 211, 0.28) 75%,
-    rgba(118, 166, 165, 0.12) 100%);
-  background-size: 400% 400%;
-  animation: streamFlow 6s ease-in-out infinite;
-  border-color: rgba(118, 166, 165, 0.35);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(118, 166, 165, 0.12));
+  border-color: rgba(118, 166, 165, 0.3);
 }
 
 @keyframes streamFlow {
