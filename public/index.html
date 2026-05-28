@@ -23,6 +23,8 @@
           <div class="sync-dot"></div>
           <span id="sync-text">连接中</span>
         </div>
+        <button class="btn" id="realm-create-button" type="button">封疆大吏</button>
+        <button class="btn btn-accent hidden" id="realm-share-button" type="button">疆域共治</button>
         <button class="btn" id="history-button" type="button">历史长河</button>
         <button class="btn btn-accent" id="seal-button" type="button">火漆封印</button>
         <button class="btn" id="summary-button" type="button">摘要</button>
@@ -92,6 +94,22 @@
       <div class="modal-actions">
         <button class="btn" id="seal-cancel-button" type="button">取消</button>
         <button class="btn btn-accent" id="seal-submit-button" type="button">封入长河</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="realm-modal">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="realm-title-heading">
+      <div class="modal-head">
+        <h2 id="realm-title-heading">封疆大吏</h2>
+        <button class="icon-button" id="realm-close-button" type="button" aria-label="关闭">×</button>
+      </div>
+      <label class="field-label" for="realm-name-input">疆域名称</label>
+      <input class="modal-input" id="realm-name-input" type="text" maxlength="64" placeholder="例如：周末计划">
+      <div class="modal-error hidden" id="realm-error"></div>
+      <div class="modal-actions">
+        <button class="btn" id="realm-cancel-button" type="button">取消</button>
+        <button class="btn btn-accent" id="realm-submit-button" type="button">开疆辟土</button>
       </div>
     </div>
   </div>

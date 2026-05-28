@@ -200,6 +200,27 @@
     return `${left} · ${right} · ${stamp}`;
   }
 
+  function getCurrentRealm() {
+    const pathname = window.location.pathname;
+    const match = pathname.match(/^\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\/history)?\/?$/);
+    return match ? match[1] : null;
+  }
+
+  function realmApiUrl(base, realm) {
+    if (!realm) return base;
+    const separator = base.includes('?') ? '&' : '?';
+    return `${base}${separator}realm=${encodeURIComponent(realm)}`;
+  }
+
+  function toSlug(value) {
+    return normalizeText(value)
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
   window.TimeRiver = {
     DAY_KEYS,
     HOURS,
@@ -215,5 +236,8 @@
     countEntries,
     buildSummary,
     defaultArchiveTitle,
+    getCurrentRealm,
+    realmApiUrl,
+    toSlug,
   };
 }());

@@ -40,6 +40,21 @@ function normalizeText(value) {
   return typeof value === 'string' ? value : '';
 }
 
+function isValidSlug(value) {
+  return typeof value === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value) && value.length >= 1 && value.length <= 64;
+}
+
+function extractRealm(req) {
+  const realm = req.query.realm || (req.body && req.body.realm);
+  if (!realm || realm === 'main') return null;
+  if (!isValidSlug(realm)) return undefined;
+  return realm;
+}
+
+function scheduleIdForRealm(realm) {
+  return realm ? `realm:${realm}` : 'main';
+}
+
 function buildDatabaseConfig(rawDatabaseUrl) {
   const url = new URL(rawDatabaseUrl);
   const sslMode = url.searchParams.get('sslmode');
@@ -114,6 +129,7 @@ function defaultLocalStore() {
       updated_at: null,
     },
     archives: [],
+    realms: {},
   };
 }
 
@@ -130,6 +146,7 @@ function readLocalStore() {
       updated_at: parsed.schedule && typeof parsed.schedule === 'object' ? Number(parsed.schedule.updated_at) || null : null,
     },
     archives: Array.isArray(parsed.archives) ? parsed.archives : [],
+    realms: parsed.realms && typeof parsed.realms === 'object' ? parsed.realms : {},
   };
 }
 
@@ -175,6 +192,15 @@ async function initializeStorage() {
     `);
 
     await pool.query(`
+      ALTER TABLE archives ADD COLUMN IF NOT EXISTS realm_id TEXT NOT NULL DEFAULT 'main';
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_archives_realm_created
+      ON archives(realm_id, created_at DESC);
+    `);
+
+    await pool.query(`
       INSERT INTO schedules (id, data, updated_at)
       VALUES ($1, $2::jsonb, $3)
       ON CONFLICT (id) DO NOTHING;
@@ -214,9 +240,11 @@ async function ensureStorageReady() {
   await kickOffStorageInitialization();
 }
 
-async function getCurrentScheduleRecord() {
+async function getCurrentScheduleRecord(realm = null) {
+  const id = scheduleIdForRealm(realm);
+
   if (storageDriver === 'postgres') {
-    const row = await queryOne('SELECT data, updated_at FROM schedules WHERE id = $1', ['main']);
+    const row = await queryOne('SELECT data, updated_at FROM schedules WHERE id = $1', [id]);
     if (!row) {
       return { data: {}, updated_at: null };
     }
@@ -228,13 +256,25 @@ async function getCurrentScheduleRecord() {
   }
 
   const store = readLocalStore();
+  if (realm) {
+    const realmData = store.realms[realm];
+    if (realmData && realmData.schedule) {
+      return {
+        data: realmData.schedule.data || {},
+        updated_at: realmData.schedule.updated_at || null,
+      };
+    }
+    return { data: {}, updated_at: null };
+  }
   return {
     data: store.schedule.data || {},
     updated_at: store.schedule.updated_at,
   };
 }
 
-async function saveScheduleRecord(data, updatedAt) {
+async function saveScheduleRecord(data, updatedAt, realm = null) {
+  const id = scheduleIdForRealm(realm);
+
   if (storageDriver === 'postgres') {
     await pool.query(`
       INSERT INTO schedules (id, data, updated_at)
@@ -242,25 +282,38 @@ async function saveScheduleRecord(data, updatedAt) {
       ON CONFLICT (id) DO UPDATE SET
         data = EXCLUDED.data,
         updated_at = EXCLUDED.updated_at
-    `, ['main', JSON.stringify(data), updatedAt]);
+    `, [id, JSON.stringify(data), updatedAt]);
     return;
   }
 
   const store = readLocalStore();
-  store.schedule = {
-    data,
-    updated_at: updatedAt,
-  };
+  if (realm) {
+    if (!store.realms[realm]) {
+      store.realms[realm] = {};
+    }
+    store.realms[realm].schedule = {
+      data,
+      updated_at: updatedAt,
+    };
+  } else {
+    store.schedule = {
+      data,
+      updated_at: updatedAt,
+    };
+  }
   writeLocalStore(store);
 }
 
-async function getArchiveRecords() {
+async function getArchiveRecords(realm = null) {
+  const realmFilter = realm || 'main';
+
   if (storageDriver === 'postgres') {
     const rows = await queryAll(`
       SELECT id, title, data, d1_name, d2_name, entry_count, created_at
       FROM archives
+      WHERE realm_id = $1
       ORDER BY created_at DESC
-    `);
+    `, [realmFilter]);
 
     return rows.map((archive) => ({
       ...archive,
@@ -271,16 +324,20 @@ async function getArchiveRecords() {
   }
 
   const store = readLocalStore();
-  return [...store.archives].sort((left, right) => Number(right.created_at) - Number(left.created_at));
+  return [...store.archives]
+    .filter((archive) => (archive.realm_id || 'main') === realmFilter)
+    .sort((left, right) => Number(right.created_at) - Number(left.created_at));
 }
 
-async function getArchiveRecordById(id) {
+async function getArchiveRecordById(id, realm = null) {
+  const realmFilter = realm || 'main';
+
   if (storageDriver === 'postgres') {
     const archive = await queryOne(`
       SELECT id, title, data, d1_name, d2_name, entry_count, created_at
       FROM archives
-      WHERE id = $1
-    `, [id]);
+      WHERE id = $1 AND realm_id = $2
+    `, [id, realmFilter]);
 
     if (!archive) return null;
 
@@ -293,14 +350,16 @@ async function getArchiveRecordById(id) {
   }
 
   const store = readLocalStore();
-  return store.archives.find((archive) => archive.id === id) || null;
+  return store.archives.find((archive) => archive.id === id && (archive.realm_id || 'main') === realmFilter) || null;
 }
 
-async function insertArchiveRecord(archiveRecord) {
+async function insertArchiveRecord(archiveRecord, realm = null) {
+  archiveRecord.realm_id = realm || 'main';
+
   if (storageDriver === 'postgres') {
     await pool.query(`
-      INSERT INTO archives (id, title, data, d1_name, d2_name, entry_count, created_at)
-      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
+      INSERT INTO archives (id, title, data, d1_name, d2_name, entry_count, created_at, realm_id)
+      VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8)
     `, [
       archiveRecord.id,
       archiveRecord.title,
@@ -309,6 +368,7 @@ async function insertArchiveRecord(archiveRecord) {
       archiveRecord.d2_name,
       archiveRecord.entry_count,
       archiveRecord.created_at,
+      archiveRecord.realm_id,
     ]);
     return;
   }
@@ -327,7 +387,7 @@ async function checkStorageHealth() {
   readLocalStore();
 }
 
-async function exportSnapshot() {
+async function exportSnapshot(realm = null) {
   return {
     generated_at: Date.now(),
     persistence: {
@@ -336,8 +396,8 @@ async function exportSnapshot() {
       local_data_path: storageDriver === 'file' ? LOCAL_DATA_PATH : null,
       backup_dir: BACKUP_DIR,
     },
-    schedule: await getCurrentScheduleRecord(),
-    archives: await getArchiveRecords(),
+    schedule: await getCurrentScheduleRecord(realm),
+    archives: await getArchiveRecords(realm),
   };
 }
 
@@ -372,9 +432,14 @@ function asyncHandler(handler) {
   };
 }
 
-app.get('/api/schedule', asyncHandler(async (_req, res) => {
+app.get('/api/schedule', asyncHandler(async (req, res) => {
   await ensureStorageReady();
-  res.json(await getCurrentScheduleRecord());
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
+  res.json(await getCurrentScheduleRecord(realm));
 }));
 
 app.post('/api/schedule', asyncHandler(async (req, res) => {
@@ -384,16 +449,27 @@ app.post('/api/schedule', asyncHandler(async (req, res) => {
     return;
   }
 
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
+
   const normalized = normalizeScheduleData(req.body);
   const now = Date.now();
-  await saveScheduleRecord(normalized, now);
+  await saveScheduleRecord(normalized, now, realm);
   await writeLatestBackup();
   res.json({ ok: true, updated_at: now });
 }));
 
-app.get('/api/archives', asyncHandler(async (_req, res) => {
+app.get('/api/archives', asyncHandler(async (req, res) => {
   await ensureStorageReady();
-  const archives = await getArchiveRecords();
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
+  const archives = await getArchiveRecords(realm);
   res.json({
     archives: archives.map((archive) => ({
       id: archive.id,
@@ -408,7 +484,12 @@ app.get('/api/archives', asyncHandler(async (_req, res) => {
 
 app.get('/api/archives/:id', asyncHandler(async (req, res) => {
   await ensureStorageReady();
-  const archive = await getArchiveRecordById(req.params.id);
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
+  const archive = await getArchiveRecordById(req.params.id, realm);
 
   if (!archive) {
     res.status(404).json({ error: 'Archive not found' });
@@ -426,6 +507,12 @@ app.get('/api/archives/:id', asyncHandler(async (req, res) => {
 
 app.post('/api/archives', asyncHandler(async (req, res) => {
   await ensureStorageReady();
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
+
   const title = normalizeText(req.body && req.body.title).trim();
   if (!title) {
     res.status(400).json({ error: 'Archive title is required' });
@@ -452,7 +539,7 @@ app.post('/api/archives', asyncHandler(async (req, res) => {
     created_at: createdAt,
   };
 
-  await insertArchiveRecord(archiveRecord);
+  await insertArchiveRecord(archiveRecord, realm);
   writeArchiveBackup(archiveRecord);
   await writeLatestBackup();
 
@@ -469,11 +556,16 @@ app.post('/api/archives', asyncHandler(async (req, res) => {
   });
 }));
 
-app.get('/api/export', asyncHandler(async (_req, res) => {
+app.get('/api/export', asyncHandler(async (req, res) => {
   await ensureStorageReady();
+  const realm = extractRealm(req);
+  if (realm === undefined) {
+    res.status(400).json({ error: 'Invalid realm slug' });
+    return;
+  }
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="time-river-export.json"');
-  res.send(JSON.stringify(await exportSnapshot(), null, 2));
+  res.send(JSON.stringify(await exportSnapshot(realm), null, 2));
 }));
 
 app.get('/health', asyncHandler(async (_req, res) => {
@@ -490,6 +582,25 @@ app.get('/health', asyncHandler(async (_req, res) => {
     backup_path: LATEST_BACKUP_PATH,
   });
 }));
+
+const REALM_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const RESERVED_PATHS = new Set(['api', 'health', 'history.html', 'styles.css', 'shared.js', 'main.js', 'history.js']);
+
+app.get('/:slug/history', (req, res, next) => {
+  const { slug } = req.params;
+  if (RESERVED_PATHS.has(slug) || !REALM_SLUG_PATTERN.test(slug)) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'history.html'));
+});
+
+app.get('/:slug', (req, res, next) => {
+  const { slug } = req.params;
+  if (RESERVED_PATHS.has(slug) || !REALM_SLUG_PATTERN.test(slug)) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.use((error, _req, res, _next) => {
   console.error('Server error:', error);

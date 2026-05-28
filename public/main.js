@@ -11,7 +11,12 @@ const {
   countEntries,
   buildSummary,
   defaultArchiveTitle,
+  getCurrentRealm,
+  realmApiUrl,
+  toSlug,
 } = window.TimeRiver;
+
+const currentRealm = getCurrentRealm();
 
 const LEGACY_MERGE_STORAGE_KEY = 'time-river-display-merges';
 
@@ -41,6 +46,12 @@ const refs = {
   expandTitle: document.getElementById('slot-expand-title'),
   expandTextarea: document.getElementById('slot-expand-textarea'),
   expandClose: document.getElementById('slot-expand-close'),
+  realmCreateButton: document.getElementById('realm-create-button'),
+  realmShareButton: document.getElementById('realm-share-button'),
+  realmModal: document.getElementById('realm-modal'),
+  realmNameInput: document.getElementById('realm-name-input'),
+  realmError: document.getElementById('realm-error'),
+  realmSubmitButton: document.getElementById('realm-submit-button'),
 };
 
 let expandCallback = null;
@@ -150,26 +161,29 @@ function closeExpandPanel() {
 }
 
 async function fetchSchedule() {
-  const response = await fetch('/api/schedule');
+  const url = realmApiUrl('/api/schedule', currentRealm);
+  const response = await fetch(url);
   if (!response.ok) throw new Error('fetch failed');
   return response.json();
 }
 
 async function pushSchedule(payload) {
-  const response = await fetch('/api/schedule', {
+  const url = realmApiUrl('/api/schedule', currentRealm);
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, realm: currentRealm }),
   });
   if (!response.ok) throw new Error('push failed');
   return response.json();
 }
 
 async function createArchive(title) {
-  const response = await fetch('/api/archives', {
+  const url = realmApiUrl('/api/archives', currentRealm);
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, data }),
+    body: JSON.stringify({ title, data, realm: currentRealm }),
   });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.error || 'archive failed');
@@ -388,6 +402,38 @@ function openSealModal() {
   refs.sealTitleInput.select();
 }
 
+function openRealmModal() {
+  refs.realmNameInput.value = '';
+  refs.realmError.textContent = '';
+  refs.realmError.classList.add('hidden');
+  refs.realmModal.classList.remove('hidden');
+  refs.realmNameInput.focus();
+}
+
+function closeRealmModal() {
+  refs.realmModal.classList.add('hidden');
+}
+
+function submitRealm() {
+  const name = refs.realmNameInput.value.trim();
+  if (!name) {
+    refs.realmError.textContent = '请输入疆域名称';
+    refs.realmError.classList.remove('hidden');
+    refs.realmNameInput.focus();
+    return;
+  }
+
+  const slug = toSlug(name);
+  if (!slug) {
+    refs.realmError.textContent = '名称无效，请使用字母、数字或空格';
+    refs.realmError.classList.remove('hidden');
+    refs.realmNameInput.focus();
+    return;
+  }
+
+  window.location.href = `/${slug}`;
+}
+
 function closeSealModal() {
   refs.sealModal.classList.add('hidden');
 }
@@ -484,7 +530,7 @@ function bindStaticEvents() {
   });
 
   document.getElementById('history-button').addEventListener('click', () => {
-    window.location.href = '/history.html';
+    window.location.href = currentRealm ? `/${currentRealm}/history` : '/history.html';
   });
   document.getElementById('seal-button').addEventListener('click', openSealModal);
   document.getElementById('summary-button').addEventListener('click', renderSummary);
@@ -506,6 +552,23 @@ function bindStaticEvents() {
   });
   refs.sealSubmitButton.addEventListener('click', submitSeal);
 
+  // 封疆大吏事件
+  refs.realmCreateButton.addEventListener('click', openRealmModal);
+  refs.realmShareButton.addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href);
+    showToast('疆域链接已复制，可分享给共治者');
+  });
+  document.getElementById('realm-close-button').addEventListener('click', closeRealmModal);
+  document.getElementById('realm-cancel-button').addEventListener('click', closeRealmModal);
+  refs.realmModal.addEventListener('click', (event) => {
+    if (event.target === refs.realmModal) closeRealmModal();
+  });
+  refs.realmNameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') submitRealm();
+    if (event.key === 'Escape') closeRealmModal();
+  });
+  refs.realmSubmitButton.addEventListener('click', submitRealm);
+
   // 展开弹窗事件
   refs.expandClose.addEventListener('click', closeExpandPanel);
   refs.expandBackdrop.addEventListener('click', (event) => {
@@ -518,6 +581,13 @@ function bindStaticEvents() {
 
 (async function init() {
   bindStaticEvents();
+
+  // 如果是疆域页面，调整 UI
+  if (currentRealm) {
+    document.title = `${currentRealm} | 光阴长河`;
+    refs.realmShareButton.classList.remove('hidden');
+    refs.realmCreateButton.classList.add('hidden');
+  }
 
   try {
     const result = await fetchSchedule();

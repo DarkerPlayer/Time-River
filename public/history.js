@@ -8,7 +8,11 @@ const {
   getActiveMergeSpan,
   countEntries,
   buildSummary,
+  getCurrentRealm,
+  realmApiUrl,
 } = window.TimeRiver;
+
+const currentRealm = getCurrentRealm();
 
 const historyRefs = {
   timelineList: document.getElementById('timeline-list'),
@@ -36,14 +40,16 @@ let selectedArchiveId = null;
 let activeMobileDay = 'd1';
 
 async function fetchArchives() {
-  const response = await fetch('/api/archives');
+  const url = realmApiUrl('/api/archives', currentRealm);
+  const response = await fetch(url);
   if (!response.ok) throw new Error('fetch archives failed');
   return response.json();
 }
 
 async function fetchArchiveDetail(id) {
   if (archiveCache.has(id)) return archiveCache.get(id);
-  const response = await fetch(`/api/archives/${id}`);
+  const url = realmApiUrl(`/api/archives/${id}`, currentRealm);
+  const response = await fetch(url);
   if (!response.ok) throw new Error('fetch archive detail failed');
   const payload = await response.json();
   archiveCache.set(id, payload.archive);
@@ -168,8 +174,13 @@ async function selectArchive(id) {
 
 (async function initHistory() {
   document.getElementById('back-button').addEventListener('click', () => {
-    window.location.href = '/';
+    window.location.href = currentRealm ? `/${currentRealm}` : '/';
   });
+
+  // 如果是疆域页面，调整标题
+  if (currentRealm) {
+    document.title = `${currentRealm} 历史 | 光阴长河`;
+  }
   document.getElementById('history-print-button').addEventListener('click', () => {
     window.print();
   });
