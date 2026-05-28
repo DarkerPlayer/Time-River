@@ -554,9 +554,11 @@ function bindStaticEvents() {
 
   // 封疆大吏事件
   refs.realmCreateButton.addEventListener('click', openRealmModal);
-  refs.realmShareButton.addEventListener('click', () => {
-    navigator.clipboard.writeText(window.location.href);
-    showToast('疆域链接已复制，可分享给共治者');
+  refs.realmShareButton.addEventListener('click', async () => {
+    const realmName = data.d1name || data.d2name || currentRealm;
+    const shareText = `${window.location.href}\n光阴长河 · ${realmName} · 点击链接参与协同编辑`;
+    await navigator.clipboard.writeText(shareText);
+    showToast('链接已复制，可分享给共治者');
   });
   document.getElementById('realm-close-button').addEventListener('click', closeRealmModal);
   document.getElementById('realm-cancel-button').addEventListener('click', closeRealmModal);
@@ -584,9 +586,15 @@ function bindStaticEvents() {
 
   // 如果是疆域页面，调整 UI
   if (currentRealm) {
-    document.title = `${currentRealm} | 光阴长河`;
     refs.realmShareButton.classList.remove('hidden');
     refs.realmCreateButton.classList.add('hidden');
+    // 添加疆域名称按钮
+    const realmNameBtn = document.createElement('button');
+    realmNameBtn.className = 'btn realm-name-btn';
+    realmNameBtn.id = 'realm-name-display';
+    realmNameBtn.type = 'button';
+    realmNameBtn.textContent = currentRealm;
+    refs.realmCreateButton.parentNode.insertBefore(realmNameBtn, refs.realmCreateButton);
   }
 
   try {
@@ -601,6 +609,14 @@ function bindStaticEvents() {
       ? `共 ${counts.totalHours} 小时`
       : '今天还没有安排';
     setSyncStatus('synced');
+
+    // 更新疆域页面标题
+    if (currentRealm) {
+      const realmName = data.d1name || data.d2name || currentRealm;
+      document.title = `${realmName} | 光阴长河`;
+      const nameDisplay = document.getElementById('realm-name-display');
+      if (nameDisplay) nameDisplay.textContent = realmName;
+    }
   } catch (error) {
     console.error('Init failed:', error);
     hydrateLegacyMergeState();

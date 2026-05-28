@@ -176,6 +176,16 @@ textarea {
   color: #ffffff;
 }
 
+.realm-name-btn {
+  background: linear-gradient(135deg, #d4a853 0%, #f0d78c 50%, #d4a853 100%);
+  border-color: rgba(212, 168, 83, 0.4);
+  color: #5a4a1e;
+  font-weight: 600;
+  cursor: default;
+  pointer-events: none;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
 .btn-danger:hover {
   color: var(--danger);
   border-color: rgba(192, 123, 115, 0.32);
