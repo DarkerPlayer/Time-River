@@ -342,29 +342,25 @@ textarea {
 
 /* 移动端文本截断和展开样式 */
 @media (max-width: 720px) {
+  .slot-card {
+    overflow: hidden;
+  }
+
   .slot-card.has-content {
     cursor: pointer;
-    background: linear-gradient(135deg,
-      rgba(118, 166, 165, 0.06) 0%,
-      rgba(142, 188, 187, 0.12) 25%,
-      rgba(118, 166, 165, 0.08) 50%,
-      rgba(168, 213, 211, 0.14) 75%,
-      rgba(118, 166, 165, 0.06) 100%);
-    background-size: 400% 400%;
-    animation: streamFlow 6s ease-in-out infinite;
-    border-color: rgba(118, 166, 165, 0.25);
   }
 
   .slot-card .slot-text-preview {
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.55;
     color: var(--text);
-    white-space: pre-wrap;
+    white-space: nowrap;
     word-break: break-word;
+    max-height: 1.55em;
   }
 
   .slot-card .slot-input {
@@ -451,14 +447,14 @@ textarea {
 
 .slot-card.has-content {
   background: linear-gradient(135deg,
-    rgba(118, 166, 165, 0.06) 0%,
-    rgba(142, 188, 187, 0.12) 25%,
-    rgba(118, 166, 165, 0.08) 50%,
-    rgba(168, 213, 211, 0.14) 75%,
-    rgba(118, 166, 165, 0.06) 100%);
+    rgba(118, 166, 165, 0.12) 0%,
+    rgba(142, 188, 187, 0.22) 25%,
+    rgba(118, 166, 165, 0.16) 50%,
+    rgba(168, 213, 211, 0.28) 75%,
+    rgba(118, 166, 165, 0.12) 100%);
   background-size: 400% 400%;
   animation: streamFlow 6s ease-in-out infinite;
-  border-color: rgba(118, 166, 165, 0.25);
+  border-color: rgba(118, 166, 165, 0.35);
 }
 
 @keyframes streamFlow {
