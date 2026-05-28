@@ -202,7 +202,7 @@
 
   function getCurrentRealm() {
     const pathname = window.location.pathname;
-    const match = pathname.match(/^\/([a-z0-9]+(?:-[a-z0-9]+)*)(?:\/history)?\/?$/);
+    const match = pathname.match(/^\/([一-龥a-z0-9]+(?:-[一-龥a-z0-9]+)*)(?:\/history)?\/?$/);
     return match ? match[1] : null;
   }
 
@@ -214,9 +214,9 @@
 
   function toSlug(value) {
     return normalizeText(value)
-      .toLowerCase()
+      .trim()
       .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
+      .replace(/[^一-龥a-z0-9-]/g, '')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
   }

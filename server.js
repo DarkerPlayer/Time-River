@@ -41,7 +41,7 @@ function normalizeText(value) {
 }
 
 function isValidSlug(value) {
-  return typeof value === 'string' && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value) && value.length >= 1 && value.length <= 64;
+  return typeof value === 'string' && /^[一-龥a-z0-9]+(-[一-龥a-z0-9]+)*$/.test(value) && value.length >= 1 && value.length <= 64;
 }
 
 function extractRealm(req) {
@@ -583,7 +583,7 @@ app.get('/health', asyncHandler(async (_req, res) => {
   });
 }));
 
-const REALM_SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const REALM_SLUG_PATTERN = /^[一-龥a-z0-9]+(-[一-龥a-z0-9]+)*$/;
 const RESERVED_PATHS = new Set(['api', 'health', 'history.html', 'styles.css', 'shared.js', 'main.js', 'history.js']);
 
 app.get('/:slug/history', (req, res, next) => {
