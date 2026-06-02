@@ -28,7 +28,7 @@
       merges: emptyMerges(),
     };
     HOURS.forEach((hour) => {
-      data.slots[hour] = { d1: '', d2: '' };
+      data.slots[hour] = { d1: '', d2: '', d1checked: false, d2checked: false };
     });
     return data;
   }
@@ -51,6 +51,8 @@
       base.slots[hour] = {
         d1: normalizeText(slot && slot.d1),
         d2: normalizeText(slot && slot.d2),
+        d1checked: Boolean(slot && slot.d1checked),
+        d2checked: Boolean(slot && slot.d2checked),
       };
     });
 

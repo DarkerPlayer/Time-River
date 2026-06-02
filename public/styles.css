@@ -338,6 +338,7 @@ textarea {
 }
 
 .slot-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -838,5 +839,119 @@ textarea {
   .last-sync,
   .slot-controls {
     display: none !important;
+  }
+}
+
+/* 勾选框样式 */
+.slot-checkbox {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--bg-soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+  z-index: 2;
+}
+
+.slot-checkbox:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.slot-checkbox.checked {
+  background: var(--accent);
+  border-color: var(--accent-deep);
+  opacity: 1;
+}
+
+.slot-checkbox.checked svg {
+  width: 12px;
+  height: 12px;
+  color: white;
+}
+
+/* 勾选后的淡金色背景 - 模仿 has-content 的绿色效果 */
+.slot-card.slot-checked {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(212, 168, 83, 0.18));
+  border-color: rgba(212, 168, 83, 0.35);
+}
+
+.slot-card.slot-checked:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(212, 168, 83, 0.22));
+}
+
+/* 移动端展开面板的勾选框样式 */
+.slot-expand-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.slot-expand-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 0;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.slot-expand-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line-strong);
+  background: var(--bg-soft);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+}
+
+.slot-expand-check input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent-deep);
+}
+
+.slot-expand-check input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* 暗色模式下的勾选框样式 */
+@media (prefers-color-scheme: dark) {
+  .slot-checkbox {
+    background: var(--surface-strong);
+    border-color: var(--line-strong);
+  }
+
+  .slot-checkbox:hover {
+    background: var(--accent-soft);
+  }
+
+  .slot-card.slot-checked {
+    background: linear-gradient(180deg, var(--surface-strong), rgba(212, 168, 83, 0.15));
+    border-color: rgba(212, 168, 83, 0.35);
+  }
+
+  .slot-expand-check input[type="checkbox"] {
+    background: var(--surface-strong);
+    border-color: var(--line-strong);
   }
 }

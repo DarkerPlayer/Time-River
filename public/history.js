@@ -93,7 +93,9 @@ function renderReadonlyDay(dayKey, root, dayData) {
     root.appendChild(createReadonlyTimeStamp(hour, span));
 
     const slot = document.createElement('div');
-    slot.className = `slot-card readonly-slot${value ? ' has-content' : ' is-empty'}`;
+    const checkKey = `${dayKey}checked`;
+    const isChecked = Boolean(dayData.slots[hour] && dayData.slots[hour][checkKey]);
+    slot.className = `slot-card readonly-slot${value ? ' has-content' : ' is-empty'}${isChecked ? ' slot-checked' : ''}`;
     slot.style.gridRow = `${index + 1} / span ${span}`;
     slot.textContent = value;
     root.appendChild(slot);

@@ -46,6 +46,7 @@ const refs = {
   expandTitle: document.getElementById('slot-expand-title'),
   expandTextarea: document.getElementById('slot-expand-textarea'),
   expandClose: document.getElementById('slot-expand-close'),
+  expandCheckbox: document.getElementById('slot-expand-checkbox'),
   realmCreateButton: document.getElementById('realm-create-button'),
   realmShareButton: document.getElementById('realm-share-button'),
   realmModal: document.getElementById('realm-modal'),
@@ -136,12 +137,13 @@ function showToast(message, tone = 'success') {
   }, 2200);
 }
 
-function openExpandPanel(hour, dayKey, currentValue, onSave) {
+function openExpandPanel(hour, dayKey, currentValue, currentChecked, onSave) {
   const period = getPeriodLabel(hour);
   const dayName = dayKey === 'd1' ? '第一天' : '第二天';
   refs.expandTitle.textContent = `${dayName} · ${period || hour}`;
 
   refs.expandTextarea.value = currentValue;
+  refs.expandCheckbox.checked = currentChecked;
   refs.expandBackdrop.classList.add('visible');
   document.body.style.overflow = 'hidden';
 
@@ -151,8 +153,8 @@ function openExpandPanel(hour, dayKey, currentValue, onSave) {
 }
 
 function closeExpandPanel() {
-  if (expandCallback && refs.expandTextarea.value !== refs.expandTextarea.defaultValue) {
-    expandCallback(refs.expandTextarea.value);
+  if (expandCallback) {
+    expandCallback(refs.expandTextarea.value, refs.expandCheckbox.checked);
   }
   refs.expandBackdrop.classList.remove('visible');
   document.body.style.overflow = '';
@@ -312,10 +314,14 @@ function renderDayColumn(dayKey, root) {
       // 点击展开弹窗（空白格子也可点击）
       slot.addEventListener('click', () => {
         const preview = slot.querySelector('.slot-text-preview');
-        openExpandPanel(hour, dayKey, data.slots[hour][dayKey], (newValue) => {
+        const checkKey = `${dayKey}checked`;
+        const currentChecked = Boolean(data.slots[hour][checkKey]);
+        openExpandPanel(hour, dayKey, data.slots[hour][dayKey], currentChecked, (newValue, newChecked) => {
           data.slots[hour][dayKey] = newValue;
+          data.slots[hour][checkKey] = newChecked;
           if (preview) preview.textContent = newValue;
           slot.classList.toggle('has-content', Boolean(newValue.trim()));
+          slot.classList.toggle('slot-checked', newChecked);
           // 如果输入了内容但没有预览元素，刷新列表
           if (newValue.trim() && !preview) renderColumns();
           scheduleSave();
@@ -343,6 +349,28 @@ function renderDayColumn(dayKey, root) {
     slot.appendChild(textarea);
 
     if (value) {
+      // 勾选框
+      const checkKey = `${dayKey}checked`;
+      const isChecked = Boolean(data.slots[hour][checkKey]);
+      const checkbox = document.createElement('div');
+      checkbox.className = `slot-checkbox${isChecked ? ' checked' : ''}`;
+      checkbox.innerHTML = isChecked
+        ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '';
+      checkbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newState = !data.slots[hour][checkKey];
+        data.slots[hour][checkKey] = newState;
+        checkbox.classList.toggle('checked', newState);
+        checkbox.innerHTML = newState
+          ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          : '';
+        slot.classList.toggle('slot-checked', newState);
+        scheduleSave();
+      });
+      slot.appendChild(checkbox);
+      if (isChecked) slot.classList.add('slot-checked');
+
       const maxSpan = getMaxMergeSpan(dayKey, index);
       if (maxSpan > 1 || span > 1) {
         const controls = document.createElement('div');
