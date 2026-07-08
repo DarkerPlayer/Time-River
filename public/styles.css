@@ -777,10 +777,6 @@ textarea {
     --row-height: 64px;
   }
 
-  body {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom));
-  }
-
   .page-shell {
     width: min(100vw - 16px, 1360px);
     margin: 8px auto 22px;
@@ -800,14 +796,15 @@ textarea {
   }
 
   .topbar-mobile-dock {
-    position: fixed;
-    left: 8px;
-    right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
     top: auto;
-    z-index: 30;
+    z-index: auto;
+    order: 2;
     border-radius: 16px;
-    margin: 0;
+    margin: 16px 0 0;
     padding: 10px;
     overflow: hidden;
   }
