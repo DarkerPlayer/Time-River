@@ -360,15 +360,15 @@ textarea {
   .slot-card.has-content {
     cursor: pointer;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-rows: minmax(0, 1fr) auto;
     align-items: center;
     gap: 4px 10px;
   }
 
   .slot-card .slot-text-preview {
-    grid-column: 1;
-    grid-row: 1 / span 2;
+    grid-column: 1 / -1;
+    grid-row: 1;
     min-width: 0;
     min-height: 1.55em;
     align-self: center;
@@ -388,7 +388,7 @@ textarea {
   }
 
   .slot-card.has-content .slot-controls {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 2;
     align-self: end;
     justify-self: end;
@@ -397,7 +397,14 @@ textarea {
   }
 
   .slot-card.has-content .slot-checkbox {
-    display: none;
+    grid-column: 1;
+    grid-row: 2;
+    position: static;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    opacity: 0.9;
+    z-index: 3;
   }
 
   .slot-card.has-content .merge-select {
