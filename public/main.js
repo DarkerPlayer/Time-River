@@ -47,6 +47,8 @@ const refs = {
   expandTextarea: document.getElementById('slot-expand-textarea'),
   expandClose: document.getElementById('slot-expand-close'),
   expandCheckbox: document.getElementById('slot-expand-checkbox'),
+  expandCancel: document.getElementById('slot-expand-cancel'),
+  expandSave: document.getElementById('slot-expand-save'),
   realmCreateButton: document.getElementById('realm-create-button'),
   realmShareButton: document.getElementById('realm-share-button'),
   realmModal: document.getElementById('realm-modal'),
@@ -152,8 +154,8 @@ function openExpandPanel(hour, dayKey, currentValue, currentChecked, onSave) {
   setTimeout(() => refs.expandTextarea.focus(), 100);
 }
 
-function closeExpandPanel() {
-  if (expandCallback) {
+function closeExpandPanel(shouldSave = false) {
+  if (shouldSave && expandCallback) {
     expandCallback(refs.expandTextarea.value, refs.expandCheckbox.checked);
   }
   refs.expandBackdrop.classList.remove('visible');
@@ -600,12 +602,18 @@ function bindStaticEvents() {
   refs.realmSubmitButton.addEventListener('click', submitRealm);
 
   // 展开弹窗事件
-  refs.expandClose.addEventListener('click', closeExpandPanel);
+  refs.expandClose.addEventListener('click', () => closeExpandPanel(false));
+  refs.expandCancel.addEventListener('click', () => closeExpandPanel(false));
+  refs.expandSave.addEventListener('click', () => closeExpandPanel(true));
   refs.expandBackdrop.addEventListener('click', (event) => {
-    if (event.target === refs.expandBackdrop) closeExpandPanel();
+    if (event.target === refs.expandBackdrop) closeExpandPanel(false);
   });
   refs.expandTextarea.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeExpandPanel();
+    if (event.key === 'Escape') closeExpandPanel(false);
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      closeExpandPanel(true);
+    }
   });
 }
 

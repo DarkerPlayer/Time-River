@@ -829,6 +829,23 @@ textarea {
     width: 100%;
     justify-content: flex-start;
   }
+
+  .slot-expand-panel {
+    max-height: calc(100vh - 28px);
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .slot-expand-footer {
+    position: sticky;
+    bottom: 0;
+    padding-bottom: 4px;
+    background: linear-gradient(180deg, rgba(245, 249, 248, 0), rgba(245, 249, 248, 0.96) 20%);
+  }
+
+  .slot-expand-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media print {
@@ -893,6 +910,8 @@ textarea {
 .slot-expand-footer {
   padding-top: 12px;
   border-top: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
 }
 
 .slot-expand-check {
@@ -932,6 +951,17 @@ textarea {
   border: solid white;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+
+.slot-expand-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.slot-expand-actions .btn {
+  width: 100%;
+  min-height: 44px;
 }
 
 /* 暗色模式下的勾选框样式 */
