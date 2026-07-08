@@ -59,6 +59,10 @@ const refs = {
 
 let expandCallback = null;
 
+function stopSlotControlEvent(event) {
+  event.stopPropagation();
+}
+
 function loadLegacyMergeState() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(LEGACY_MERGE_STORAGE_KEY) || '{}');
@@ -314,7 +318,9 @@ function renderDayColumn(dayKey, root) {
       }
 
       // 点击展开弹窗（空白格子也可点击）
-      slot.addEventListener('click', () => {
+      slot.addEventListener('click', (event) => {
+        if (event.target.closest('.slot-controls, .slot-checkbox, .merge-select')) return;
+
         const preview = slot.querySelector('.slot-text-preview');
         const checkKey = `${dayKey}checked`;
         const currentChecked = Boolean(data.slots[hour][checkKey]);
@@ -359,6 +365,8 @@ function renderDayColumn(dayKey, root) {
       checkbox.innerHTML = isChecked
         ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         : '';
+      checkbox.addEventListener('pointerdown', stopSlotControlEvent);
+      checkbox.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
       checkbox.addEventListener('click', (e) => {
         e.stopPropagation();
         const newState = !data.slots[hour][checkKey];
@@ -377,9 +385,15 @@ function renderDayColumn(dayKey, root) {
       if (maxSpan > 1 || span > 1) {
         const controls = document.createElement('div');
         controls.className = 'slot-controls';
+        controls.addEventListener('pointerdown', stopSlotControlEvent);
+        controls.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
+        controls.addEventListener('click', stopSlotControlEvent);
 
         const select = document.createElement('select');
         select.className = 'merge-select';
+        select.addEventListener('pointerdown', stopSlotControlEvent);
+        select.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
+        select.addEventListener('click', stopSlotControlEvent);
 
         for (let optionValue = 1; optionValue <= maxSpan; optionValue += 1) {
           const option = document.createElement('option');
@@ -390,6 +404,7 @@ function renderDayColumn(dayKey, root) {
         }
 
         select.addEventListener('change', (event) => {
+          event.stopPropagation();
           const nextSpan = Number(event.target.value);
           const merges = ensureMergeState();
           if (nextSpan <= 1) delete merges[dayKey][hour];

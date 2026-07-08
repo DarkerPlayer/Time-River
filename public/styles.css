@@ -359,12 +359,20 @@ textarea {
 
   .slot-card.has-content {
     cursor: pointer;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 10px;
   }
 
   .slot-card .slot-text-preview {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    min-width: 0;
+    min-height: 1.55em;
+    align-self: center;
+    display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.55;
@@ -372,6 +380,19 @@ textarea {
     white-space: nowrap;
     word-break: break-word;
     max-height: 1.55em;
+  }
+
+  .slot-card.has-content .slot-controls {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    justify-self: end;
+    position: relative;
+    z-index: 3;
+  }
+
+  .slot-card.has-content .slot-checkbox {
+    z-index: 4;
   }
 
   .slot-card .slot-input {
