@@ -777,6 +777,10 @@ textarea {
     --row-height: 64px;
   }
 
+  body {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
   .page-shell {
     width: min(100vw - 16px, 1360px);
     margin: 8px auto 22px;
@@ -796,12 +800,14 @@ textarea {
   }
 
   .topbar-mobile-dock {
-    position: static;
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
     top: auto;
-    z-index: auto;
-    order: 1;
+    z-index: 30;
     border-radius: 16px;
-    margin: 0 0 12px;
+    margin: 0;
     padding: 10px;
     overflow: hidden;
   }
@@ -860,7 +866,7 @@ textarea {
   }
 
   .topbar-mobile-dock + .main-layout {
-    order: 2;
+    order: 1;
     padding-bottom: 0;
     margin-top: 0;
   }

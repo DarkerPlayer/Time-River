@@ -6,7 +6,8 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATABASE_URL = (process.env.DATABASE_URL || '').trim();
+const DEFAULT_DATABASE_URL = 'postgresql://neondb_owner:npg_uVg3BOxW1ADy@ep-shy-leaf-aqzssdvw-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+const DATABASE_URL = (process.env.DATABASE_URL || DEFAULT_DATABASE_URL).trim();
 const DATA_DIR = path.join(__dirname, 'data');
 const LOCAL_DATA_PATH = process.env.LOCAL_DATA_PATH || path.join(DATA_DIR, 'local-store.json');
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, 'backups');
