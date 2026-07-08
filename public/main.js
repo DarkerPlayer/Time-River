@@ -304,7 +304,7 @@ function renderDayColumn(dayKey, root) {
     root.appendChild(createTimeStamp(hour, span));
 
     const slot = document.createElement('div');
-    slot.className = `slot-card${value ? ' has-content' : ''}`;
+    slot.className = `slot-card${value ? ' has-content' : ''}${span > 1 ? ' is-merged' : ''}`;
     slot.style.gridRow = `${index + 1} / span ${span}`;
 
     // 移动端文本预览

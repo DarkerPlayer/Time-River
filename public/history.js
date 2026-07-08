@@ -140,14 +140,14 @@ function renderTimeline() {
       <span class="timeline-item-title">${archive.title}</span>
       <span class="timeline-item-meta">${formatDateTime(archive.created_at)}</span>
     `;
-    button.addEventListener('click', () => selectArchive(archive.id));
+    button.addEventListener('click', () => selectArchive(archive.id, true));
     historyRefs.timelineList.appendChild(button);
   });
 
   setSelectedState();
 }
 
-async function selectArchive(id) {
+async function selectArchive(id, shouldScrollToDetail = false) {
   selectedArchiveId = id;
   setSelectedState();
   historyRefs.detailEmpty.classList.add('hidden');
@@ -168,6 +168,10 @@ async function selectArchive(id) {
   renderReadonlyDay('d2', historyRefs.d2Column, dayData);
   setHistoryMobileDay(activeMobileDay);
   historyRefs.detailPanel.classList.remove('hidden');
+
+  if (shouldScrollToDetail && window.matchMedia('(max-width: 720px)').matches) {
+    historyRefs.detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   const url = new URL(window.location.href);
   url.searchParams.set('archive', id);

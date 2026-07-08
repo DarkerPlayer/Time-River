@@ -382,6 +382,11 @@ textarea {
     max-height: 1.55em;
   }
 
+  .slot-card.is-merged .slot-text-preview {
+    white-space: normal;
+    max-height: 3.1em;
+  }
+
   .slot-card.has-content .slot-controls {
     grid-column: 2;
     grid-row: 2;
@@ -392,9 +397,14 @@ textarea {
   }
 
   .slot-card.has-content .slot-checkbox {
-    z-index: 4;
+    display: none;
   }
 
+  .slot-card.has-content .merge-select {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
   .slot-card .slot-input {
     display: none;
   }
@@ -763,6 +773,10 @@ textarea {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --row-height: 64px;
+  }
+
   .page-shell {
     width: min(100vw - 16px, 1360px);
     margin: 8px auto 22px;
@@ -785,20 +799,59 @@ textarea {
     position: static;
     top: auto;
     z-index: auto;
-    border-radius: 18px;
-    margin-top: 16px;
+    order: 1;
+    border-radius: 16px;
+    margin: 0 0 12px;
+    padding: 10px;
+    overflow: hidden;
   }
 
   .topbar-mobile-dock .topbar-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    align-items: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .topbar-mobile-dock .topbar-actions::-webkit-scrollbar {
+    display: none;
   }
 
   .topbar-mobile-dock .sync-status {
-    grid-column: 1 / -1;
     order: 0;
+    flex: 0 0 auto;
     justify-content: center;
+  }
+
+  .topbar-mobile-dock #history-button {
+    order: 1;
+  }
+
+  .topbar-mobile-dock #seal-button {
+    order: 2;
+  }
+
+  .topbar-mobile-dock #realm-share-button {
+    order: 3;
+  }
+
+  .topbar-mobile-dock #summary-button {
+    order: 4;
+  }
+
+  .topbar-mobile-dock #print-button {
+    order: 5;
+  }
+
+  .topbar-mobile-dock #realm-create-button {
+    order: 6;
+  }
+
+  .topbar-mobile-dock #clear-button {
+    order: 9;
   }
 
   .page-shell {
@@ -806,18 +859,19 @@ textarea {
     flex-direction: column;
   }
 
-  .topbar-mobile-dock {
-    order: 2;
-  }
-
   .topbar-mobile-dock + .main-layout {
-    order: 1;
+    order: 2;
     padding-bottom: 0;
+    margin-top: 0;
   }
 
   .topbar-mobile-dock .btn {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
     min-width: 0;
+    min-height: 36px;
+    padding: 0 12px;
+    white-space: nowrap;
   }
 
   .mobile-day-switcher {
@@ -845,6 +899,25 @@ textarea {
     gap: 8px 10px;
   }
 
+  .day-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 6px 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .day-card-head {
+    grid-row: 1 / span 2;
+  }
+
+  .day-card #d1name,
+  .day-card #d2name,
+  .readonly-day-name {
+    font-size: 16px;
+    line-height: 1.35;
+  }
+
   .panel-actions,
   .modal-actions {
     width: 100%;
@@ -861,7 +934,7 @@ textarea {
     position: sticky;
     bottom: 0;
     padding-bottom: 4px;
-    background: linear-gradient(180deg, rgba(245, 249, 248, 0), rgba(245, 249, 248, 0.96) 20%);
+    background: linear-gradient(180deg, transparent, var(--surface-strong) 20%);
   }
 
   .slot-expand-actions {
