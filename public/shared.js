@@ -13,6 +13,9 @@
     22: '深夜',
     0: '凌晨',
   };
+  const REALM_SEGMENT_PATTERN = '[\\p{Script=Han}a-z0-9]+';
+  const REALM_ROUTE_PATTERN = new RegExp(`^/(${REALM_SEGMENT_PATTERN}(?:-${REALM_SEGMENT_PATTERN})*)(?:/history)?/?$`, 'u');
+  const REALM_FILTER_PATTERN = /[^\p{Script=Han}a-z0-9-]/gu;
 
   function emptyMerges() {
     return { d1: {}, d2: {} };
@@ -204,7 +207,7 @@
 
   function getCurrentRealm() {
     const pathname = window.location.pathname;
-    const match = pathname.match(/^\/([一-龥a-z0-9]+(?:-[一-龥a-z0-9]+)*)(?:\/history)?\/?$/);
+    const match = pathname.match(REALM_ROUTE_PATTERN);
     return match ? match[1] : null;
   }
 
@@ -218,7 +221,7 @@
     return normalizeText(value)
       .trim()
       .replace(/\s+/g, '-')
-      .replace(/[^一-龥a-z0-9-]/g, '')
+      .replace(REALM_FILTER_PATTERN, '')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
   }

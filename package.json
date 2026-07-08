@@ -1,9 +1,10 @@
 {
-  "name": "daily-planner",
+  "name": "time-river",
   "version": "1.0.0",
-  "description": "Two-day schedule planner with multi-device sync",
+  "description": "Two-day schedule planner with archive history and mobile collaboration",
   "main": "server.js",
   "scripts": {
+    "check": "node scripts/check.js",
     "start": "node --disable-warning=ExperimentalWarning server.js",
     "dev": "node --disable-warning=ExperimentalWarning --watch server.js"
   },

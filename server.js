@@ -6,13 +6,14 @@ const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DEFAULT_DATABASE_URL = 'postgresql://neondb_owner:npg_uVg3BOxW1ADy@ep-shy-leaf-aqzssdvw-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
-const DATABASE_URL = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+const DATABASE_URL = (process.env.DATABASE_URL || '').trim();
 const DATA_DIR = path.join(__dirname, 'data');
 const LOCAL_DATA_PATH = process.env.LOCAL_DATA_PATH || path.join(DATA_DIR, 'local-store.json');
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(DATA_DIR, 'backups');
 const ARCHIVE_BACKUP_DIR = path.join(BACKUP_DIR, 'archives');
 const LATEST_BACKUP_PATH = path.join(BACKUP_DIR, 'time-river-latest.json');
+const REALM_SEGMENT_PATTERN = '[\\p{Script=Han}a-z0-9]+';
+const REALM_SLUG_PATTERN = new RegExp(`^${REALM_SEGMENT_PATTERN}(?:-${REALM_SEGMENT_PATTERN})*$`, 'u');
 
 ensureDir(DATA_DIR);
 ensureDir(path.dirname(LOCAL_DATA_PATH));
@@ -41,7 +42,10 @@ function normalizeText(value) {
 }
 
 function isValidSlug(value) {
-  return typeof value === 'string' && /^[一-龥a-z0-9]+(-[一-龥a-z0-9]+)*$/.test(value) && value.length >= 1 && value.length <= 64;
+  return typeof value === 'string'
+    && value.length >= 1
+    && value.length <= 64
+    && REALM_SLUG_PATTERN.test(value);
 }
 
 function extractRealm(req) {
@@ -423,6 +427,7 @@ function logPersistenceMode() {
   console.log(`[storage] DATABASE_URL configured: ${DATABASE_URL ? 'yes' : 'no'}`);
   if (storageDriver === 'file') {
     console.warn(`[storage] Falling back to local file storage at ${LOCAL_DATA_PATH}`);
+    console.warn('[storage] Configure DATABASE_URL in production to avoid data loss on ephemeral disks.');
   }
 }
 
@@ -583,7 +588,6 @@ app.get('/health', asyncHandler(async (_req, res) => {
   });
 }));
 
-const REALM_SLUG_PATTERN = /^[一-龥a-z0-9]+(-[一-龥a-z0-9]+)*$/;
 const RESERVED_PATHS = new Set(['api', 'health', 'history.html', 'styles.css', 'shared.js', 'main.js', 'history.js']);
 
 app.get('/:slug/history', (req, res, next) => {
