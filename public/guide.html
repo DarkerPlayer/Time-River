@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Time River 光阴长河产品说明与使用指南">
+  <title>产品说明 | Time River</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="page-shell guide-shell">
+    <header class="topbar topbar-minimal guide-topbar">
+      <div class="topbar-actions">
+        <a class="btn" href="/">返回计划</a>
+        <a class="btn" href="/history.html">历史长河</a>
+      </div>
+    </header>
+
+    <main class="guide-layout">
+      <nav class="guide-nav" aria-label="产品说明目录">
+        <p class="guide-kicker">Time River</p>
+        <h1>产品说明</h1>
+        <div class="guide-nav-links">
+          <a href="#start">快速开始</a>
+          <a href="#editing">编辑日程</a>
+          <a href="#merge">合并时段</a>
+          <a href="#complete">标记完成</a>
+          <a href="#summary">摘要与同步</a>
+          <a href="#archive">火漆封印</a>
+          <a href="#history">历史长河</a>
+          <a href="#realm">疆域共治</a>
+          <a href="#print">打印与数据</a>
+          <a href="#help">常见问题</a>
+        </div>
+      </nav>
+
+      <article class="guide-article">
+        <header class="guide-intro">
+          <p class="guide-kicker">光阴长河</p>
+          <h2>双日程计划与只读历史</h2>
+          <p>当前计划可以持续编辑，确定后的版本可以通过火漆封印保存到历史长河。手机端进入页面后优先展示时间信息，功能操作统一放在页面最下方。</p>
+        </header>
+
+        <section class="guide-section" id="start">
+          <span class="guide-index">01</span>
+          <div>
+            <h2>快速开始</h2>
+            <ol>
+              <li>使用“第一天 / 第二天”页签切换日期。</li>
+              <li>填写当天名称和日期。</li>
+              <li>点击对应时间格，输入内容后点击“保存”。</li>
+              <li>等待页面底部显示“已同步”。</li>
+              <li>计划确定后，滚动到底部执行摘要、打印或火漆封印。</li>
+            </ol>
+          </div>
+        </section>
+
+        <section class="guide-section" id="editing">
+          <span class="guide-index">02</span>
+          <div>
+            <h2>编辑双日程</h2>
+            <p>时间轴从 06:00 延续到次日 05:00，并用上午、中午、下午、晚上、深夜和凌晨帮助定位。两天的名称、日期、事项、时长和完成状态完全独立。</p>
+            <p>手机端点击空白或已有内容的时间格打开编辑面板。“保存”提交修改；“取消”、关闭按钮、遮罩或 Escape 放弃本次未保存内容。桌面端可直接在时间格内输入。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="merge">
+          <span class="guide-index">03</span>
+          <div>
+            <h2>合并时段</h2>
+            <p>有内容的时间格右侧会显示紧凑的时长按钮。可以选择 1 至 6 小时，但不会越过后续已有事项。</p>
+            <div class="guide-note">
+              <strong>示例</strong>
+              <p>10:00 选择 3 小时后，占用 10:00、11:00、12:00，显示为 <code>10:00~12:00</code>，摘要统计 3 小时。</p>
+            </div>
+            <p>重新选择“1小时”即可恢复普通单元格。合并只改变展示和统计，不会把内容复制到后续空白格。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="complete">
+          <span class="guide-index">04</span>
+          <div>
+            <h2>标记完成</h2>
+            <p>有内容的卡片右下方提供快捷完成按钮。点击后时间格变为淡金色，再次点击可取消。该操作不会打开编辑面板，也不会改变事项时长。</p>
+            <p>进入编辑面板后也可以通过“标记完成”修改同一状态。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="summary">
+          <span class="guide-index">05</span>
+          <div>
+            <h2>摘要与同步</h2>
+            <p>“摘要”会列出两天的非空事项、时间范围、总事项数量和小时数。合并三小时的事项按一个事项、三个小时统计。点击“复制”可发送到其他应用。</p>
+            <dl class="guide-status-list">
+              <div><dt>连接中</dt><dd>正在读取服务器数据。</dd></div>
+              <div><dt>同步中</dt><dd>修改正在等待或发送。</dd></div>
+              <div><dt>已同步</dt><dd>服务器已确认保存。</dd></div>
+              <div><dt>同步失败</dt><dd>请检查网络，恢复后再次修改一个字段触发保存。</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="guide-section" id="archive">
+          <span class="guide-index">06</span>
+          <div>
+            <h2>火漆封印</h2>
+            <p>确认计划已经同步后，点击“火漆封印”，填写历史事件名称并点击“封入长河”。系统会保存当时两天的名称、日期、事项、合并时长和完成状态。</p>
+            <p>封存不会清空当前计划。之后继续修改当前计划，也不会改变已经封存的历史快照。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="history">
+          <span class="guide-index">07</span>
+          <div>
+            <h2>历史长河</h2>
+            <p>历史列表按封存时间倒序显示。选择记录后可以切换第一天和第二天，查看当时的完整时间表、完成状态和摘要。</p>
+            <p>历史版本只能看和打印，不能编辑或删除。需要保存修订版时，请回到当前计划修改后重新执行火漆封印。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="realm">
+          <span class="guide-index">08</span>
+          <div>
+            <h2>封疆大吏与疆域共治</h2>
+            <p>“封疆大吏”创建独立协作地址。英文名称会转换为小写，空格会转换为连字符，例如 <code>Weekend Plan</code> 生成 <code>/weekend-plan</code>。</p>
+            <p>疆域页面通过“疆域共治”复制链接。每个疆域拥有独立计划和历史；知道链接的人可以编辑，因此仅应在可信范围内分享。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="print">
+          <span class="guide-index">09</span>
+          <div>
+            <h2>打印与数据</h2>
+            <p>当前计划页和历史页都支持打印。打印样式会隐藏按钮、同步状态、弹窗和时长选择，只保留可阅读内容。手机系统可能把打印显示为“保存为 PDF”。</p>
+            <p>生产环境使用服务器数据库时，代码重新部署不会删除同一数据库中的数据。本地 JSON 回退和服务器上的调试备份可能随 Render 实例重建而消失，不能替代持久数据库。</p>
+          </div>
+        </section>
+
+        <section class="guide-section" id="help">
+          <span class="guide-index">10</span>
+          <div>
+            <h2>常见问题</h2>
+            <details>
+              <summary>为什么输入后没有显示？</summary>
+              <p>手机端必须点击“保存”。确认状态变为“已同步”；若浏览器仍使用旧页面，请强制刷新静态资源。</p>
+            </details>
+            <details>
+              <summary>为什么一开始看不到菜单？</summary>
+              <p>操作区按设计位于整张日程最下方且不固定，让首屏只显示日期和时间信息。</p>
+            </details>
+            <details>
+              <summary>清空会删除历史吗？</summary>
+              <p>不会。清空只影响当前可编辑计划，已经封存的历史仍然保留。</p>
+            </details>
+            <details>
+              <summary>多人同时编辑会怎样？</summary>
+              <p>当前版本使用最后一次完整保存结果，没有字段级冲突合并。应避免多人同时快速修改同一疆域。</p>
+            </details>
+          </div>
+        </section>
+
+        <footer class="guide-footer">
+          <p>更完整的产品、架构和核心逻辑文档位于项目的 <code>docs/</code> 目录。</p>
+          <a class="btn btn-accent" href="/">返回当前计划</a>
+        </footer>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

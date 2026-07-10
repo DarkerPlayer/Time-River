@@ -8,6 +8,12 @@ const jsFiles = [
   path.join('public', 'main.js'),
   path.join('public', 'history.js'),
 ];
+const documentationFiles = [
+  path.join('docs', 'PRODUCT_MANUAL.md'),
+  path.join('docs', 'TECHNICAL_ARCHITECTURE.md'),
+  path.join('docs', 'CORE_LOGIC.md'),
+  path.join('public', 'guide.html'),
+];
 
 function readFile(relativePath) {
   return fs.readFileSync(path.join(rootDir, relativePath), 'utf8');
@@ -35,10 +41,27 @@ function assertRenderBlueprintKeepsDatabaseKey() {
   console.log('OK Render DATABASE_URL entry present');
 }
 
+function assertDocumentationComplete() {
+  documentationFiles.forEach((relativePath) => {
+    const absolutePath = path.join(rootDir, relativePath);
+    if (!fs.existsSync(absolutePath) || fs.readFileSync(absolutePath, 'utf8').length <= 1500) {
+      throw new Error(`${relativePath} must exist and contain complete documentation`);
+    }
+  });
+
+  const indexHtml = readFile(path.join('public', 'index.html'));
+  if (!/href="\/guide\.html"[^>]*>产品说明<\/a>/.test(indexHtml)) {
+    throw new Error('public/index.html must link to the product guide');
+  }
+
+  console.log('OK Product and technical documentation complete');
+}
+
 try {
   jsFiles.forEach(compileJavaScript);
   assertDatabaseFallbackConfigured();
   assertRenderBlueprintKeepsDatabaseKey();
+  assertDocumentationComplete();
   console.log('All checks passed.');
 } catch (error) {
   console.error(error.message);
