@@ -59,10 +59,6 @@ const refs = {
 
 let expandCallback = null;
 
-function stopSlotControlEvent(event) {
-  event.stopPropagation();
-}
-
 function loadLegacyMergeState() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(LEGACY_MERGE_STORAGE_KEY) || '{}');
@@ -146,7 +142,7 @@ function showToast(message, tone = 'success') {
 function openExpandPanel(hour, dayKey, currentValue, currentChecked, onSave) {
   const period = getPeriodLabel(hour);
   const dayName = dayKey === 'd1' ? '第一天' : '第二天';
-  refs.expandTitle.textContent = `${dayName} · ${period || hour}`;
+  refs.expandTitle.textContent = `${dayName} · ${period ? `${period} ` : ''}${formatHour(hour)}`;
 
   refs.expandTextarea.value = currentValue;
   refs.expandCheckbox.checked = currentChecked;
@@ -307,35 +303,28 @@ function renderDayColumn(dayKey, root) {
     slot.className = `slot-card${value ? ' has-content' : ''}${span > 1 ? ' is-merged' : ''}`;
     slot.style.gridRow = `${index + 1} / span ${span}`;
 
-    // 移动端文本预览
-    const isMobile = window.innerWidth <= 720;
-    if (isMobile) {
-      if (value) {
-        const preview = document.createElement('div');
-        preview.className = 'slot-text-preview';
-        preview.textContent = value;
-        slot.appendChild(preview);
-      }
+    const dayName = dayKey === 'd1' ? '第一天' : '第二天';
+    const period = getPeriodLabel(hour);
+    const timeContext = `${period ? `${period} ` : ''}${formatHour(hour)}`;
+    const checkKey = `${dayKey}checked`;
 
-      // 点击展开弹窗（空白格子也可点击）
-      slot.addEventListener('click', (event) => {
-        if (event.target.closest('.slot-controls, .slot-checkbox, .merge-select')) return;
-
-        const preview = slot.querySelector('.slot-text-preview');
-        const checkKey = `${dayKey}checked`;
-        const currentChecked = Boolean(data.slots[hour][checkKey]);
-        openExpandPanel(hour, dayKey, data.slots[hour][dayKey], currentChecked, (newValue, newChecked) => {
-          data.slots[hour][dayKey] = newValue;
-          data.slots[hour][checkKey] = newChecked;
-          if (preview) preview.textContent = newValue;
-          slot.classList.toggle('has-content', Boolean(newValue.trim()));
-          slot.classList.toggle('slot-checked', newChecked);
-          // 如果输入了内容但没有预览元素，刷新列表
-          if (newValue.trim() && !preview) renderColumns();
-          scheduleSave();
-        });
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'slot-edit-button slot-text-preview';
+    editButton.textContent = value;
+    editButton.setAttribute(
+      'aria-label',
+      `编辑${dayName} ${timeContext}${value ? `：${value}` : '，当前为空'}`,
+    );
+    editButton.addEventListener('click', () => {
+      const currentChecked = Boolean(data.slots[hour][checkKey]);
+      openExpandPanel(hour, dayKey, data.slots[hour][dayKey], currentChecked, (newValue, newChecked) => {
+        data.slots[hour][dayKey] = newValue;
+        data.slots[hour][checkKey] = newChecked;
+        scheduleSave();
       });
-    }
+    });
+    slot.appendChild(editButton);
 
     const textarea = document.createElement('textarea');
     textarea.className = 'slot-input';
@@ -344,9 +333,11 @@ function renderDayColumn(dayKey, root) {
     textarea.addEventListener('input', (event) => {
       data.slots[hour][dayKey] = event.target.value;
       slot.classList.toggle('has-content', Boolean(event.target.value.trim()));
-      // 更新预览文本
-      const preview = slot.querySelector('.slot-text-preview');
-      if (preview) preview.textContent = event.target.value;
+      editButton.textContent = event.target.value.trim();
+      editButton.setAttribute(
+        'aria-label',
+        `编辑${dayName} ${timeContext}${event.target.value.trim() ? `：${event.target.value.trim()}` : '，当前为空'}`,
+      );
       scheduleSave();
     });
     textarea.addEventListener('blur', () => {
@@ -357,21 +348,20 @@ function renderDayColumn(dayKey, root) {
     slot.appendChild(textarea);
 
     if (value) {
-      // 勾选框
-      const checkKey = `${dayKey}checked`;
       const isChecked = Boolean(data.slots[hour][checkKey]);
-      const checkbox = document.createElement('div');
+      const checkbox = document.createElement('button');
+      checkbox.type = 'button';
       checkbox.className = `slot-checkbox${isChecked ? ' checked' : ''}`;
+      checkbox.setAttribute('aria-label', `标记${dayName} ${timeContext}完成`);
+      checkbox.setAttribute('aria-pressed', isChecked ? 'true' : 'false');
       checkbox.innerHTML = isChecked
         ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         : '';
-      checkbox.addEventListener('pointerdown', stopSlotControlEvent);
-      checkbox.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
-      checkbox.addEventListener('click', (e) => {
-        e.stopPropagation();
+      checkbox.addEventListener('click', () => {
         const newState = !data.slots[hour][checkKey];
         data.slots[hour][checkKey] = newState;
         checkbox.classList.toggle('checked', newState);
+        checkbox.setAttribute('aria-pressed', newState ? 'true' : 'false');
         checkbox.innerHTML = newState
           ? '<svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5L6.5 12L13 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           : '';
@@ -385,15 +375,10 @@ function renderDayColumn(dayKey, root) {
       if (maxSpan > 1 || span > 1) {
         const controls = document.createElement('div');
         controls.className = 'slot-controls';
-        controls.addEventListener('pointerdown', stopSlotControlEvent);
-        controls.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
-        controls.addEventListener('click', stopSlotControlEvent);
 
         const select = document.createElement('select');
         select.className = 'merge-select';
-        select.addEventListener('pointerdown', stopSlotControlEvent);
-        select.addEventListener('touchstart', stopSlotControlEvent, { passive: true });
-        select.addEventListener('click', stopSlotControlEvent);
+        select.setAttribute('aria-label', `调整${dayName} ${formatHour(hour)} 的时长`);
 
         for (let optionValue = 1; optionValue <= maxSpan; optionValue += 1) {
           const option = document.createElement('option');
@@ -404,7 +389,6 @@ function renderDayColumn(dayKey, root) {
         }
 
         select.addEventListener('change', (event) => {
-          event.stopPropagation();
           const nextSpan = Number(event.target.value);
           const merges = ensureMergeState();
           if (nextSpan <= 1) delete merges[dayKey][hour];

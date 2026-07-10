@@ -116,10 +116,10 @@
 
   <!-- 移动端展开弹窗 -->
   <div class="slot-expand-backdrop" id="slot-expand-backdrop">
-    <div class="slot-expand-panel">
+    <div class="slot-expand-panel" role="dialog" aria-modal="true" aria-labelledby="slot-expand-title">
       <div class="slot-expand-head">
         <span class="slot-expand-title" id="slot-expand-title">编辑内容</span>
-        <button class="slot-expand-close" id="slot-expand-close" type="button">×</button>
+        <button class="slot-expand-close" id="slot-expand-close" type="button" aria-label="关闭编辑">×</button>
       </div>
       <textarea class="slot-expand-textarea" id="slot-expand-textarea" placeholder="输入内容..."></textarea>
       <div class="slot-expand-footer">
