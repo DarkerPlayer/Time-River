@@ -136,10 +136,16 @@ function renderTimeline() {
     button.type = 'button';
     button.className = 'timeline-item';
     button.dataset.archiveId = archive.id;
-    button.innerHTML = `
-      <span class="timeline-item-title">${archive.title}</span>
-      <span class="timeline-item-meta">${formatDateTime(archive.created_at)}</span>
-    `;
+
+    const titleElement = document.createElement('span');
+    titleElement.className = 'timeline-item-title';
+    titleElement.textContent = archive.title;
+
+    const metaElement = document.createElement('span');
+    metaElement.className = 'timeline-item-meta';
+    metaElement.textContent = formatDateTime(archive.created_at);
+
+    button.append(titleElement, metaElement);
     button.addEventListener('click', () => selectArchive(archive.id, true));
     historyRefs.timelineList.appendChild(button);
   });

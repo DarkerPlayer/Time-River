@@ -157,6 +157,7 @@ textarea {
   background: var(--surface-strong);
   color: var(--text-soft);
   cursor: pointer;
+  text-decoration: none;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
@@ -859,22 +860,15 @@ textarea {
   }
 
   .topbar-mobile-dock .topbar-actions {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     align-items: center;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .topbar-mobile-dock .topbar-actions::-webkit-scrollbar {
-    display: none;
   }
 
   .topbar-mobile-dock .sync-status {
     order: 0;
-    flex: 0 0 auto;
+    grid-column: 1 / -1;
     justify-content: center;
   }
 
@@ -898,8 +892,12 @@ textarea {
     order: 5;
   }
 
-  .topbar-mobile-dock #realm-create-button {
+  .topbar-mobile-dock #guide-link {
     order: 6;
+  }
+
+  .topbar-mobile-dock #realm-create-button {
+    order: 7;
   }
 
   .topbar-mobile-dock #clear-button {
@@ -918,12 +916,15 @@ textarea {
   }
 
   .topbar-mobile-dock .btn {
-    flex: 0 0 auto;
-    width: auto;
+    width: 100%;
     min-width: 0;
-    min-height: 36px;
+    min-height: 44px;
     padding: 0 12px;
     white-space: nowrap;
+  }
+
+  .history-topbar {
+    position: static;
   }
 
   .mobile-day-switcher {
@@ -970,7 +971,12 @@ textarea {
     line-height: 1.35;
   }
 
-  .panel-actions,
+  .panel-actions {
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
   .modal-actions {
     width: 100%;
     justify-content: flex-start;
