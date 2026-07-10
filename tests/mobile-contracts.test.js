@@ -26,9 +26,24 @@ test('mobile editor exposes a named dialog and close button', () => {
 test('bottom actions include the product guide without horizontal scrolling', () => {
   assert.match(indexSource, /href="\/guide\.html"[^>]*>产品说明<\/a>/);
   assert.doesNotMatch(stylesSource, /overflow-x:\s*auto/);
+  assert.match(
+    stylesSource,
+    /\.topbar-mobile-dock #clear-button\s*\{[\s\S]*?grid-column:\s*1 \/ -1;/,
+  );
 });
 
 test('history titles are built with text nodes', () => {
   assert.doesNotMatch(historySource, /button\.innerHTML/);
   assert.match(historySource, /titleElement\.textContent = archive\.title/);
+});
+
+test('filled mobile slots reserve separate rows for text and controls', () => {
+  assert.match(
+    stylesSource,
+    /grid-template-rows:\s*repeat\(var\(--rows\), minmax\(var\(--row-height\), auto\)\)/,
+  );
+  assert.match(
+    stylesSource,
+    /\.slot-card\.has-content\s*\{[\s\S]*?grid-template-rows:\s*auto auto;/,
+  );
 });

@@ -309,7 +309,7 @@ textarea {
 .day-column {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr);
-  grid-template-rows: repeat(var(--rows), var(--row-height));
+  grid-template-rows: repeat(var(--rows), minmax(var(--row-height), auto));
   gap: 8px 12px;
   align-items: stretch;
 }
@@ -374,7 +374,7 @@ textarea {
   .slot-card.has-content {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 36px 36px;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     align-items: center;
     gap: 4px 8px;
   }
@@ -1116,6 +1116,7 @@ textarea {
 
   .topbar-mobile-dock #clear-button {
     order: 9;
+    grid-column: 1 / -1;
   }
 
   .page-shell {
