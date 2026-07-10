@@ -79,7 +79,7 @@
 
   function formatHourRange(startHour, span) {
     if (span <= 1) return formatHour(startHour);
-    const endHour = (startHour + span) % 24;
+    const endHour = (startHour + span - 1) % 24;
     return `${formatHour(startHour)}~${formatHour(endHour)}`;
   }
 
@@ -220,6 +220,7 @@
   function toSlug(value) {
     return normalizeText(value)
       .trim()
+      .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(REALM_FILTER_PATTERN, '')
       .replace(/-+/g, '-')
